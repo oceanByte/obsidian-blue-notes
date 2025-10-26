@@ -8,6 +8,7 @@ import {
 } from '../../provider-interface'
 import { getPluginDataDir, getPluginModelsDir } from '../../../utils/plugin-paths'
 import { meanPooling, normalize } from './inference'
+import { DownloadProgressNotifier } from '../../../utils/download-progress-notifier'
 import { ensureDirectoryExists } from '../../../utils/file-utils'
 import { Logger } from '../../../utils/logger'
 import { MESSAGES } from '../../../constants/messages'
@@ -100,9 +101,23 @@ export class ONNXProvider implements EmbeddingProvider {
     try {
       ensureDirectoryExists(this.modelDir)
 
+      const pendingItems: string[] = []
+      if (!this.binaryDownloader.isInstalled()) {
+        pendingItems.push('ONNX Runtime')
+      }
+      if (!this.downloader.isModelDownloaded(this.currentModelType)) {
+        const modelInfo = this.downloader.getModelInfo(this.currentModelType)
+        pendingItems.push(`${modelInfo.name} model`)
+      }
+
+      const notifier =
+        pendingItems.length > 0
+          ? new DownloadProgressNotifier({ items: pendingItems })
+          : undefined
+
       const results = await Promise.allSettled([
-        this.ensureRuntimeInstalled(),
-        this.downloadModelIfNeeded(),
+        this.ensureRuntimeInstalled(notifier),
+        this.downloadModelIfNeeded(notifier),
       ])
 
       const runtimeResult = results[0]
@@ -135,18 +150,28 @@ export class ONNXProvider implements EmbeddingProvider {
   /**
    * Download model if not already present (without loading into memory)
    */
-  private async downloadModelIfNeeded(): Promise<void> {
+  private async downloadModelIfNeeded(
+    notifier?: DownloadProgressNotifier,
+  ): Promise<void> {
     if (!this.downloader.isModelDownloaded(this.currentModelType)) {
-      new Notice(MESSAGES.MODEL_DOWNLOADING(this.currentModelType))
+      if (!notifier) {
+        new Notice(MESSAGES.MODEL_DOWNLOADING(this.currentModelType))
+      }
+
       await this.downloader.downloadModel(
         this.currentModelType,
         this.getDownloadProgressCallback(),
+        notifier,
       )
-      new Notice('Embedding model downloaded successfully')
+      if (!notifier) {
+        new Notice('Embedding model downloaded successfully')
+      }
     }
   }
 
-  async ensureRuntimeInstalled(): Promise<void> {
+  async ensureRuntimeInstalled(
+    notifier?: DownloadProgressNotifier,
+  ): Promise<void> {
     if (this.binaryDownloader.isInstalled()) {
       return
     }
@@ -159,16 +184,31 @@ export class ONNXProvider implements EmbeddingProvider {
     }
 
     try {
-      new Notice('Downloading ONNX Runtime (this may take a minute)...')
+      const taskId = 'ONNX Runtime'
+
+      if (notifier) {
+        notifier.beginTask(taskId)
+      } else {
+        new Notice('Downloading ONNX Runtime (this may take a minute)...')
+      }
 
       await this.binaryDownloader.download((progress) => {
+        if (notifier && progress.total > 0) {
+          notifier.updateTaskWeight(taskId, progress.total)
+          notifier.reportProgress(taskId, progress.percentage)
+        }
         Logger.debug(
           `Download progress: ${progress.percentage.toFixed(1)}% (${(progress.downloaded / 1024 / 1024).toFixed(1)}MB / ${(progress.total / 1024 / 1024).toFixed(1)}MB)`
         )
       })
 
-      new Notice('ONNX Runtime installed successfully')
+      if (notifier) {
+        notifier.completeTask(taskId)
+      } else {
+        new Notice('ONNX Runtime installed successfully')
+      }
     } catch (error) {
+      notifier?.cancel()
       const errorMsg = error instanceof Error ? error.message : String(error)
       new Notice(`Failed to install ONNX Runtime: ${errorMsg}`)
       throw error
@@ -201,10 +241,14 @@ export class ONNXProvider implements EmbeddingProvider {
 
     try {
       if (!this.downloader.isModelDownloaded(this.currentModelType)) {
-        new Notice(MESSAGES.MODEL_DOWNLOADING(this.currentModelType))
+        const modelInfo = this.downloader.getModelInfo(this.currentModelType)
+        const notifier = new DownloadProgressNotifier({
+          items: [`${modelInfo.name} model`],
+        })
         await this.downloader.downloadModel(
           this.currentModelType,
           this.getDownloadProgressCallback(),
+          notifier,
         )
       }
 
@@ -247,9 +291,14 @@ export class ONNXProvider implements EmbeddingProvider {
     }
 
     if (!this.downloader.isModelDownloaded(modelType)) {
+      const modelInfo = this.downloader.getModelInfo(modelType)
+      const notifier = new DownloadProgressNotifier({
+        items: [`${modelInfo.name} model`],
+      })
       await this.downloader.downloadModel(
         modelType,
         this.getDownloadProgressCallback(),
+        notifier,
       )
     }
 

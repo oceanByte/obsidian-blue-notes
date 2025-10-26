@@ -6,6 +6,7 @@ import {
 } from 'obsidian'
 
 import { Logger, LogLevel } from '../utils/logger'
+import { DownloadProgressNotifier } from '../utils/download-progress-notifier'
 import { MESSAGES } from '../constants/messages'
 import { ONNXModelType } from '../embeddings/provider-interface'
 import { ProviderRegistry } from '../chat/providers/provider-config'
@@ -429,8 +430,10 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
                 button.setButtonText('Downloading...')
 
                 try {
-                  await (onnxProvider as any).ensureRuntimeInstalled()
-                  new Notice('ONNX Runtime installed successfully')
+                  const notifier = new DownloadProgressNotifier({
+                    items: ['ONNX Runtime'],
+                  })
+                  await (onnxProvider as any).ensureRuntimeInstalled(notifier)
                   this.display()
                 } catch (error) {
                   const errorMsg = error instanceof Error ? error.message : String(error)

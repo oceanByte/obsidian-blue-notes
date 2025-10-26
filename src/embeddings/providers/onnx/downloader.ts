@@ -3,6 +3,7 @@ import * as path from 'path'
 
 import { Notice } from 'obsidian'
 
+import { DownloadProgressNotifier } from '../../../utils/download-progress-notifier'
 import { ensureDirectoryExists } from '../../../utils/file-utils'
 import { Logger } from '../../../utils/logger'
 import { ONNXModelType } from '../../provider-interface'
@@ -61,6 +62,8 @@ export type DownloadProgressCallback = (
   file: string,
 ) => void
 
+const BYTES_IN_MB = 1024 * 1024
+
 /**
  * Model downloader with progress tracking
  */
@@ -102,16 +105,18 @@ export class ModelDownloader {
   async downloadModel(
     modelType: ONNXModelType,
     onProgress?: DownloadProgressCallback,
+    notifier?: DownloadProgressNotifier,
   ): Promise<void> {
     const modelInfo = MODEL_REGISTRY[modelType]
     const modelDir = this.getModelDir(modelType)
 
     ensureDirectoryExists(modelDir)
 
-    const notice = new Notice(
-      `Downloading ${modelInfo.name}...\nPreparing download...`,
-      0,
-    )
+    const taskLabel = `${modelInfo.name} model`
+    const useInternalNotice = !notifier
+    const notice = useInternalNotice
+      ? new Notice(`Downloading ${modelInfo.name}...\nPreparing download...`, 0)
+      : null
 
     try {
       const filesToDownload: { url: string; name: string; size: number }[] = [
@@ -137,6 +142,18 @@ export class ModelDownloader {
         })
       }
 
+      const estimatedTotalBytes = Math.max(
+        filesToDownload.reduce((sum, file) => sum + file.size * BYTES_IN_MB, 0),
+        1,
+      )
+
+      if (notifier) {
+        notifier.beginTask(taskLabel, estimatedTotalBytes)
+      }
+
+      let dynamicTotalBytes = estimatedTotalBytes
+      let completedBytes = 0
+
       let completedFiles = 0
       const totalFiles = filesToDownload.length
 
@@ -148,13 +165,17 @@ export class ModelDownloader {
             ? `~${Math.round(estimatedSeconds / 60)}m`
             : `~${estimatedSeconds}s`
 
-        notice.setMessage(
+        notice?.setMessage(
           `Downloading ${modelInfo.name}...\n` +
             `File ${completedFiles + 1}/${totalFiles}: ${file.name} (${fileSizeMB} MB)\n` +
             `Estimated time: ${eta}`,
         )
 
         const fileStartTime = Date.now()
+        let lastTotalFromServer = 0
+        let currentFileTotalBytes = Math.max(file.size * BYTES_IN_MB, 1)
+        let currentFileDownloaded = 0
+
         await this.downloadFile(
           file.url,
           path.join(modelDir, file.name),
@@ -163,18 +184,56 @@ export class ModelDownloader {
             if (onProgress) {
               onProgress(downloaded, total, fileName)
             }
+
+            if (notifier) {
+              if (total > 0) {
+                lastTotalFromServer = total
+              }
+
+              if (total > 0 && total !== currentFileTotalBytes) {
+                dynamicTotalBytes += total - currentFileTotalBytes
+                currentFileTotalBytes = total
+                notifier.updateTaskWeight(taskLabel, dynamicTotalBytes)
+              }
+
+              currentFileDownloaded = downloaded
+              const aggregateDownloaded = completedBytes + currentFileDownloaded
+              const percent = dynamicTotalBytes > 0
+                ? (aggregateDownloaded / dynamicTotalBytes) * 100
+                : 0
+              notifier.reportProgress(taskLabel, percent)
+            }
           },
         )
         const fileTime = (Date.now() - fileStartTime) / 1000
         Logger.debug(`Downloaded ${file.name} in ${fileTime.toFixed(1)}s`)
 
+        if (notifier) {
+          if (lastTotalFromServer === 0 && currentFileDownloaded > 0) {
+            dynamicTotalBytes += currentFileDownloaded - currentFileTotalBytes
+            currentFileTotalBytes = currentFileDownloaded
+            notifier.updateTaskWeight(taskLabel, dynamicTotalBytes)
+          }
+
+          completedBytes += currentFileTotalBytes
+          const percent = dynamicTotalBytes > 0
+            ? (completedBytes / dynamicTotalBytes) * 100
+            : 100
+          notifier.reportProgress(taskLabel, percent)
+        }
+
         completedFiles++
       }
 
-      notice.hide()
-      new Notice(`✓ ${modelInfo.name} downloaded successfully!`, 5000)
+      notice?.hide()
+      if (notifier) {
+        notifier.completeTask(taskLabel)
+      } else {
+        new Notice(`✓ ${modelInfo.name} downloaded successfully!`, 5000)
+      }
     } catch (error) {
-      notice.hide()
+      notice?.hide()
+      notifier?.cancel()
       new Notice(
         `Failed to download ${modelInfo.name}: ${error.message}`,
         8000,

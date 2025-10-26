@@ -89,12 +89,6 @@ export default class SemanticNotesPlugin extends Plugin {
     this.semanticSearch = new SemanticSearch(this, this.cache)
     this.fileProcessor = new FileProcessor(this.app.vault, this.app)
 
-    this.providerManager.initialize().catch((error) => {
-      Logger.error('Failed to initialize provider manager:', error)
-      // Don't block plugin load on provider initialization failure
-      // User can retry from settings or commands will trigger lazy loading
-    })
-
     this.chatProviderManager = new ChatProviderManager(this.settings.chat)
 
     this.contextManager = new ContextManager(this)
@@ -213,7 +207,7 @@ export default class SemanticNotesPlugin extends Plugin {
 
     Logger.info('Blue Notes plugin loaded')
 
-    this.startBackgroundModelDownload()
+    this.downloadDependencies()
   }
 
   onunload() {
@@ -249,30 +243,24 @@ export default class SemanticNotesPlugin extends Plugin {
   }
 
   /**
-   * Start downloading the embedding model in the background
+   * Download ONNX Runtime and embedding model in parallel
    * This runs after settings are loaded so the UI is immediately available
    */
-  private async startBackgroundModelDownload() {
-    const provider = this.providerManager.getProvider()
-    if (!provider) {
-      Logger.debug('No provider available for background model download')
-      return
-    }
-
+  private async downloadDependencies() {
     const stats = this.cache.getStats()
     const isFirstTime = stats.count === 0
 
     try {
-      await provider.embed('test')
-      Logger.info('Background model download/load completed successfully')
+      await this.providerManager.initialize()
+      Logger.info('Provider initialized with runtime and model ready')
 
       if (this.settingsTab && this.settingsTab.containerEl.childElementCount > 0) {
         this.settingsTab.display()
-        Logger.debug('Settings UI refreshed to show download complete')
+        Logger.debug('Settings UI refreshed after downloads')
       }
 
       if (isFirstTime) {
-        Logger.info('First model download completed - starting automatic vault processing')
+        Logger.info('First load - starting automatic vault processing')
         try {
           await this.processor.processVault()
         } catch (error) {
@@ -281,7 +269,7 @@ export default class SemanticNotesPlugin extends Plugin {
         }
       }
     } catch (error) {
-      Logger.warn('Background model initialization failed:', error.message)
+      Logger.error('Failed to initialize provider:', error)
     }
   }
 

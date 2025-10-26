@@ -141,7 +141,7 @@ ONNX Runtime binaries are automatically downloaded based on your platform when y
 |----------|--------|
 | **Is this really private?** | Yes. Semantic search runs 100% locally. AI chat only sends notes you explicitly choose, and only if you enable it. |
 | **Do I need an API key?** | No. Semantic search works without any API key. You only need one for the optional chat feature. |
-| **Does it work offline?** | Yes! Smart search works offline. AI Chat needs internet. |
+| **Does it work offline?** | Semantic search works offline. AI Chat needs internet. |
 | **Does it work on mobile?** | No, desktop-only. |
 | **Will it slow down Obsidian?** | Only during initial processing. After that, searches are very fast. |
 

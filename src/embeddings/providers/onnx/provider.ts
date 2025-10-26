@@ -12,9 +12,9 @@ import { ensureDirectoryExists } from '../../../utils/file-utils'
 import { Logger } from '../../../utils/logger'
 import { MESSAGES } from '../../../constants/messages'
 import { ModelDownloader } from './downloader'
-import { SimpleTokenizer } from './tokenizer'
-import { RuntimeBinaryDownloader } from './runtime-downloader'
 import { PlatformDetector } from './platform-detector'
+import { RuntimeBinaryDownloader } from './runtime-downloader'
+import { SimpleTokenizer } from './tokenizer'
 
 import type SemanticNotesPlugin from '../../../main'
 
@@ -61,7 +61,6 @@ export class ONNXProvider implements EmbeddingProvider {
         return false
       }
 
-      // Check if binaries are installed
       if (!this.binaryDownloader.isInstalled()) {
         Logger.info('ONNX Runtime binaries not installed, will download on plugin load')
         return false
@@ -99,7 +98,24 @@ export class ONNXProvider implements EmbeddingProvider {
 
   async initialize(): Promise<void> {
     try {
-      await this.ensureRuntimeInstalled()
+      ensureDirectoryExists(this.modelDir)
+
+      const results = await Promise.allSettled([
+        this.ensureRuntimeInstalled(),
+        this.downloadModelIfNeeded(),
+      ])
+
+      const runtimeResult = results[0]
+      const modelResult = results[1]
+
+      if (runtimeResult.status === 'rejected') {
+        Logger.error('Runtime installation failed:', runtimeResult.reason)
+        throw runtimeResult.reason
+      }
+
+      if (modelResult.status === 'rejected') {
+        Logger.warn('Model download failed:', modelResult.reason)
+      }
 
       if (!this.ort) {
         const available = await this.isAvailable()
@@ -108,13 +124,25 @@ export class ONNXProvider implements EmbeddingProvider {
         }
       }
 
-      ensureDirectoryExists(this.modelDir)
-
       Logger.debug('ONNX provider initialized (model will be loaded on first use)')
     } catch (error) {
       Logger.error('Failed to initialize ONNX provider:', error)
       new Notice(MESSAGES.MODEL_LOAD_FAILED(error.message))
       throw error
+    }
+  }
+
+  /**
+   * Download model if not already present (without loading into memory)
+   */
+  private async downloadModelIfNeeded(): Promise<void> {
+    if (!this.downloader.isModelDownloaded(this.currentModelType)) {
+      new Notice(MESSAGES.MODEL_DOWNLOADING(this.currentModelType))
+      await this.downloader.downloadModel(
+        this.currentModelType,
+        this.getDownloadProgressCallback(),
+      )
+      new Notice('Embedding model downloaded successfully')
     }
   }
 

@@ -1,0 +1,57 @@
+name: Release Obsidian Plugin
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build plugin
+        run: pnpm run build
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+
+          # Create a temporary directory for release assets
+          mkdir -p release-assets
+
+          # Copy main plugin files
+          cp main.js manifest.json styles.css release-assets/
+
+          # Create a zip file for easier distribution (optional but recommended)
+          cd release-assets
+          zip -r ../blue-notes-${tag}.zip .
+          cd ..
+
+          gh release create "$tag" \
+            --title="$tag" \
+            --generate-notes \
+            release-assets/main.js \
+            release-assets/manifest.json \
+            release-assets/styles.css \
+            blue-notes-${tag}.zip

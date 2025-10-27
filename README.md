@@ -126,15 +126,6 @@ Blue Notes stores all files within your vault:
 
 All data stays local and can be safely deleted anytime.
 
-## Platform Support
-
-Blue Notes supports the following platforms:
-- macOS (Intel x64 & Apple Silicon arm64)
-- Windows (x64)
-- Linux (x64 & arm64)
-
-ONNX Runtime binaries are automatically downloaded based on your platform when you first enable the plugin.
-
 ## FAQ
 
 | Question | Answer |

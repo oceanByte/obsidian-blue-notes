@@ -3,6 +3,7 @@ import * as path from 'path'
 
 import { Notice } from 'obsidian'
 
+import { downloadFile } from '../../../utils/http-downloader'
 import { DownloadProgressNotifier } from '../../../utils/download-progress-notifier'
 import { ensureDirectoryExists } from '../../../utils/file-utils'
 import { Logger } from '../../../utils/logger'
@@ -176,34 +177,36 @@ export class ModelDownloader {
         let currentFileTotalBytes = Math.max(file.size * BYTES_IN_MB, 1)
         let currentFileDownloaded = 0
 
-        await this.downloadFile(
+        await downloadFile(
           file.url,
           path.join(modelDir, file.name),
-          file.name,
-          (downloaded, total, fileName) => {
-            if (onProgress) {
-              onProgress(downloaded, total, fileName)
-            }
-
-            if (notifier) {
-              if (total > 0) {
-                lastTotalFromServer = total
+          {
+            onProgress: (progress) => {
+              const { downloaded, total } = progress
+              if (onProgress) {
+                onProgress(downloaded, total, file.name)
               }
 
-              if (total > 0 && total !== currentFileTotalBytes) {
-                dynamicTotalBytes += total - currentFileTotalBytes
-                currentFileTotalBytes = total
-                notifier.updateTaskWeight(taskLabel, dynamicTotalBytes)
-              }
+              if (notifier) {
+                if (total > 0) {
+                  lastTotalFromServer = total
+                }
 
-              currentFileDownloaded = downloaded
-              const aggregateDownloaded = completedBytes + currentFileDownloaded
-              const percent = dynamicTotalBytes > 0
-                ? (aggregateDownloaded / dynamicTotalBytes) * 100
-                : 0
-              notifier.reportProgress(taskLabel, percent)
+                if (total > 0 && total !== currentFileTotalBytes) {
+                  dynamicTotalBytes += total - currentFileTotalBytes
+                  currentFileTotalBytes = total
+                  notifier.updateTaskWeight(taskLabel, dynamicTotalBytes)
+                }
+
+                currentFileDownloaded = downloaded
+                const aggregateDownloaded = completedBytes + currentFileDownloaded
+                const percent = dynamicTotalBytes > 0
+                  ? (aggregateDownloaded / dynamicTotalBytes) * 100
+                  : 0
+                notifier.reportProgress(taskLabel, percent)
+              }
             }
-          },
+          }
         )
         const fileTime = (Date.now() - fileStartTime) / 1000
         Logger.debug(`Downloaded ${file.name} in ${fileTime.toFixed(1)}s`)
@@ -276,93 +279,6 @@ export class ModelDownloader {
   private estimateDownloadTime(fileSizeMB: number): number {
     const avgSpeedMBps = 5
     return Math.ceil(fileSizeMB / avgSpeedMBps)
-  }
-
-  /**
-   * Download a single file using Obsidian's requestUrl
-   */
-  private async downloadFile(
-    url: string,
-    destPath: string,
-    fileName: string,
-    onProgress?: DownloadProgressCallback,
-  ): Promise<void> {
-    Logger.info(`Downloading ${fileName} from ${url}`)
-
-    // eslint-disable-next-line
-    const https = require('https')
-    const tmpPath = destPath + '.tmp'
-
-    await new Promise<void>((resolve, reject) => {
-      const file = fs.createWriteStream(tmpPath)
-      const follow = (link: string, base?: string) => {
-        let targetUrl: string
-        try {
-          targetUrl = new URL(link, base ?? url).toString()
-        } catch (error) {
-          try { file.close(); fs.unlinkSync(tmpPath) } catch {}
-          reject(new Error(`Invalid URL: ${link}`))
-          return
-        }
-
-        https
-          .get(targetUrl, (res: any) => {
-            if (
-              res.statusCode &&
-              res.statusCode >= 300 &&
-              res.statusCode < 400 &&
-              res.headers.location
-            ) {
-              follow(res.headers.location, targetUrl)
-              return
-            }
-            this.handleStream(res, file, onProgress, fileName, resolve, reject, tmpPath, destPath)
-          })
-          .on('error', (err: any) => {
-            try { file.close(); fs.unlinkSync(tmpPath) } catch {}
-            reject(err)
-          })
-      }
-      follow(url)
-    })
-  }
-
-  private handleStream(
-    res: any,
-    file: any,
-    onProgress: DownloadProgressCallback | undefined,
-    fileName: string,
-    resolve: () => void,
-    reject: (e: any) => void,
-    tmpPath: string,
-    destPath: string,
-  ) {
-    if (res.statusCode !== 200) {
-      reject(new Error(`HTTP ${res.statusCode}`))
-      return
-    }
-    const total = parseInt(res.headers['content-length'] || '0', 10)
-    let downloaded = 0
-    res.on('data', (chunk: Buffer) => {
-      downloaded += chunk.length
-      if (onProgress) onProgress(downloaded, total, fileName)
-    })
-    res.pipe(file)
-    file.on('finish', () => {
-      file.close(() => {
-        try {
-          fs.renameSync(tmpPath, destPath)
-          Logger.info(`✓ Downloaded ${fileName} (${(downloaded / 1024 / 1024).toFixed(2)} MB)`)
-          resolve()
-        } catch (e) {
-          reject(e)
-        }
-      })
-    })
-    res.on('error', (err: any) => {
-      try { fs.unlinkSync(tmpPath) } catch {}
-      reject(err)
-    })
   }
 
   /**

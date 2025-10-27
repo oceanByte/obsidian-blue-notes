@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { ensureDirectoryExists } from '../../../utils/file-utils'
 
 interface InstallationState {
   installed: boolean
@@ -33,9 +34,7 @@ export class InstallationStateManager {
 
   private saveState(): void {
     const dir = path.dirname(this.stateFile)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-    }
+    ensureDirectoryExists(dir)
     fs.writeFileSync(this.stateFile, JSON.stringify(this.state, null, 2), 'utf-8')
   }
 

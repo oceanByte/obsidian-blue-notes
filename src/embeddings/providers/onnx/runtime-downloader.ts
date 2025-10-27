@@ -1,10 +1,11 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import * as https from 'https'
 import * as tar from 'tar'
 import { PlatformDetector } from './platform-detector'
 import { InstallationStateManager } from './installation-state'
 import { Logger } from '../../../utils/logger'
+import { downloadFile, HttpDownloadProgress } from '../../../utils/http-downloader'
+import { ensureDirectoryExists } from '../../../utils/file-utils'
 
 export interface DownloadProgress {
   downloaded: number
@@ -83,12 +84,12 @@ export class RuntimeBinaryDownloader {
 
       Logger.info(`Downloading ONNX Runtime from ${url}`)
 
-      if (!fs.existsSync(this.dataDir)) {
-        fs.mkdirSync(this.dataDir, { recursive: true })
-      }
+      ensureDirectoryExists(this.dataDir)
 
       const tempTarball = path.join(this.dataDir, 'onnxruntime-temp.tgz')
-      await this.downloadFile(url, tempTarball, onProgress)
+      await downloadFile(url, tempTarball, {
+        onProgress: onProgress as ((progress: HttpDownloadProgress) => void) | undefined
+      })
 
       Logger.info('Extracting tarball...')
 
@@ -165,9 +166,7 @@ export class RuntimeBinaryDownloader {
     }
 
     const nodeModulesDir = path.join(installPath, 'node_modules')
-    if (!fs.existsSync(nodeModulesDir)) {
-      fs.mkdirSync(nodeModulesDir, { recursive: true })
-    }
+    ensureDirectoryExists(nodeModulesDir)
 
     for (const [depName, versionRange] of Object.entries(dependencies)) {
       const resolvedVersion = this.resolveVersion(versionRange)
@@ -188,88 +187,14 @@ export class RuntimeBinaryDownloader {
 
       Logger.info(`Downloading dependency ${depName}@${resolvedVersion} from ${tarballUrl}`)
 
-      await this.downloadFile(tarballUrl, tempTarball)
+      await downloadFile(tarballUrl, tempTarball)
       await this.extractTarball(tempTarball, dependencyPath)
       fs.unlinkSync(tempTarball)
     }
   }
 
-  private downloadFile(
-    url: string,
-    dest: string,
-    onProgress?: (progress: DownloadProgress) => void
-  ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const file = fs.createWriteStream(dest)
-
-      const request = https.get(url, (response) => {
-        if (response.statusCode === 302 || response.statusCode === 301) {
-
-          const redirectUrl = response.headers.location
-          if (!redirectUrl) {
-            file.close()
-            fs.unlinkSync(dest)
-            reject(new Error('Redirect location header missing'))
-            return
-          }
-          file.close()
-          fs.unlinkSync(dest)
-          this.downloadFile(redirectUrl, dest, onProgress).then(resolve).catch(reject)
-          return
-        }
-
-        if (response.statusCode !== 200) {
-          file.close()
-          fs.unlinkSync(dest)
-          reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`))
-          return
-        }
-
-        const total = parseInt(response.headers['content-length'] || '0', 10)
-        let downloaded = 0
-
-        response.on('data', (chunk) => {
-          downloaded += chunk.length
-          if (onProgress && total > 0) {
-            onProgress({
-              downloaded,
-              total,
-              percentage: (downloaded / total) * 100
-            })
-          }
-        })
-
-        response.pipe(file)
-
-        file.on('finish', () => {
-          file.close()
-          resolve()
-        })
-      })
-
-      request.setTimeout(60000, () => {
-        request.destroy()
-        file.close()
-        if (fs.existsSync(dest)) {
-          fs.unlinkSync(dest)
-        }
-        reject(new Error('Request timeout after 60 seconds'))
-      })
-
-      request.on('error', (err) => {
-        file.close()
-        if (fs.existsSync(dest)) {
-          fs.unlinkSync(dest)
-        }
-        reject(err)
-      })
-    })
-  }
-
   private async extractTarball(tarballPath: string, destDir: string): Promise<void> {
-    if (!fs.existsSync(destDir)) {
-      fs.mkdirSync(destDir, { recursive: true })
-    }
+    ensureDirectoryExists(destDir)
 
     await tar.extract({
       file: tarballPath,

@@ -35,7 +35,6 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
     const { containerEl } = this
 
     containerEl.empty()
-    containerEl.createEl('h2', { text: 'Embedding Model' })
 
     {
       const provider = this.plugin.providerManager.getProvider()

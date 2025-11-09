@@ -94,9 +94,12 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
                     this.plugin.cache.clear()
                     await this.plugin.cache.save()
 
-                    new Notice(MESSAGES.MODEL_CHANGED_REPROCESS, 8000)
+                    new Notice('Model changed! Automatically reprocessing vault with new model...', 5000)
 
                     this.display()
+
+                    // Automatically reprocess the vault with the new model
+                    await this.plugin.processor.processVault()
                   } catch (error) {
                     new Notice(MESSAGES.ERROR(error.message))
                   }

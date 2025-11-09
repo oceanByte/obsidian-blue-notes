@@ -44,7 +44,7 @@ interface SemanticNotesSettings {
 const DEFAULT_SETTINGS: SemanticNotesSettings = {
   provider: {
     type: ProviderType.ONNX,
-    modelType: ONNXModelType.DEFAULT,
+    modelType: ONNXModelType.E5_SMALL,
     enabled: true,
   },
   autoProcess: true,
@@ -82,7 +82,7 @@ export default class SemanticNotesPlugin extends Plugin {
     const pluginDataDir = getPluginDataDir(this.app)
 
     this.providerManager = new ProviderManager(this)
-    this.cache = new EmbeddingCache(pluginDataDir)
+    this.cache = new EmbeddingCache(pluginDataDir, this.settings.provider.modelType)
     await this.cache.initialize()
 
     this.processor = new EmbeddingProcessor(this, this.cache)

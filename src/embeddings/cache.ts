@@ -39,10 +39,12 @@ export class EmbeddingCache {
   private cacheFilePath: string
   private cache: CacheData
   private isDirty = false
+  private currentModel: string
 
-  constructor(pluginDataDir: string) {
+  constructor(pluginDataDir: string, modelType?: string) {
     this.cacheDir = path.join(pluginDataDir, 'cache')
-    this.cacheFilePath = path.join(this.cacheDir, 'embeddings.json')
+    this.currentModel = modelType || 'multilingual-e5-small'
+    this.cacheFilePath = path.join(this.cacheDir, `embeddings-${this.currentModel}.json`)
     this.cache = this.createEmptyCache()
   }
 
@@ -205,6 +207,37 @@ export class EmbeddingCache {
     }
   }
 
+  async switchModel(modelType: string): Promise<void> {
+    await this.save()
+
+    this.currentModel = modelType
+    this.cacheFilePath = path.join(this.cacheDir, `embeddings-${this.currentModel}.json`)
+
+    if (fs.existsSync(this.cacheFilePath)) {
+      try {
+        const data = fs.readFileSync(this.cacheFilePath, 'utf-8')
+        this.cache = JSON.parse(data)
+
+        const totalChunks = Object.values(this.cache.embeddings).reduce(
+          (sum, entry) => sum + entry.chunks.length,
+          0,
+        )
+
+        Logger.info(
+          `Switched to ${modelType} cache with ${Object.keys(this.cache.embeddings).length} files, ${totalChunks} chunks`,
+        )
+      } catch (error) {
+        Logger.error(`Failed to load cache for ${modelType}:`, error)
+        this.cache = this.createEmptyCache()
+      }
+    } else {
+      Logger.info(`No existing cache for ${modelType}, starting fresh`)
+      this.cache = this.createEmptyCache()
+    }
+
+    this.isDirty = false
+  }
+
   /**
    * Clear all cached embeddings
    */
@@ -240,8 +273,8 @@ export class EmbeddingCache {
 
   private createEmptyCache(): CacheData {
     return {
-      version: '2.0.0',
-      model: 'all-MiniLM-L6-v2',
+      version: '1.0.0',
+      model: 'multilingual-e5-small',
       created: Date.now(),
       embeddings: {},
     }

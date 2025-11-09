@@ -66,8 +66,8 @@ export interface ProviderConfig {
 }
 
 export enum ONNXModelType {
-  DEFAULT = 'all-MiniLM-L6-v2',
   E5_SMALL = 'multilingual-e5-small',
+  MINI_LM = 'all-MiniLM-L6-v2',
 }
 
 export interface ONNXProviderConfig extends ProviderConfig {

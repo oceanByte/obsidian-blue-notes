@@ -46,7 +46,7 @@ export class ONNXProvider implements EmbeddingProvider {
     this.downloader = new ModelDownloader(this.modelDir)
 
     this.currentModelType =
-      this.plugin.settings?.provider?.modelType || ONNXModelType.DEFAULT
+      this.plugin.settings?.provider?.modelType || ONNXModelType.E5_SMALL
 
     const pluginDataDir = getPluginDataDir(this.plugin.app)
     this.binaryDownloader = new RuntimeBinaryDownloader(pluginDataDir, this.ONNX_VERSION)
@@ -288,8 +288,10 @@ export class ONNXProvider implements EmbeddingProvider {
 
   /**
    * Switch to a different model
+   * @param modelType - The model type to switch to
+   * @param silent - If true, suppress the success notice (default: false)
    */
-  async switchModel(modelType: ONNXModelType): Promise<void> {
+  async switchModel(modelType: ONNXModelType, silent = false): Promise<void> {
     if (modelType === this.currentModelType) {
       return
     }
@@ -312,7 +314,9 @@ export class ONNXProvider implements EmbeddingProvider {
 
     await this.loadModel(modelType)
 
-    new Notice(MESSAGES.MODEL_SWITCHED(modelType))
+    if (!silent) {
+      new Notice(MESSAGES.MODEL_SWITCHED(modelType))
+    }
   }
 
   /**

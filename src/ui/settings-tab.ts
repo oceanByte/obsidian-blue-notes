@@ -72,7 +72,7 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
 
           return dropdown
             .setValue(
-              this.plugin.settings.provider.modelType || ONNXModelType.DEFAULT,
+              this.plugin.settings.provider.modelType || ONNXModelType.E5_SMALL,
             )
             .onChange(async (value) => {
               const previousModel = this.plugin.settings.provider.modelType
@@ -87,16 +87,19 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
                   try {
                     await (
                       provider as {
-                        switchModel: (model: ONNXModelType) => Promise<void>;
+                        switchModel: (model: ONNXModelType, silent?: boolean) => Promise<void>;
                       }
-                    ).switchModel(newModel)
+                    ).switchModel(newModel, true)
 
-                    this.plugin.cache.clear()
-                    await this.plugin.cache.save()
-
-                    new Notice(MESSAGES.MODEL_CHANGED_REPROCESS, 8000)
+                    await this.plugin.cache.switchModel(newModel)
 
                     this.display()
+
+                    const modelInfo = this.plugin.providerManager.getProvider()?.['getDownloader']?.()?.getModelInfo(newModel)
+                    const modelName = modelInfo?.name || newModel
+                    new Notice(`Switched to ${modelName}. Processing vault...`)
+
+                    await this.plugin.processor.processVault(false)
                   } catch (error) {
                     new Notice(MESSAGES.ERROR(error.message))
                   }

@@ -97,14 +97,9 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
 
                     const modelInfo = this.plugin.providerManager.getProvider()?.['getDownloader']?.()?.getModelInfo(newModel)
                     const modelName = modelInfo?.name || newModel
-                    const stats = this.plugin.cache.getStats()
+                    new Notice(`Switched to ${modelName}. Processing vault...`)
 
-                    if (stats.count > 0) {
-                      new Notice(`Switched to ${modelName} (${stats.count} files already cached)`)
-                    } else {
-                      new Notice(`Switched to ${modelName}. Processing vault...`)
-                      await this.plugin.processor.processVault(false)
-                    }
+                    await this.plugin.processor.processVault(false)
                   } catch (error) {
                     new Notice(MESSAGES.ERROR(error.message))
                   }

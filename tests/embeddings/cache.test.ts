@@ -8,7 +8,7 @@ vi.mock('fs');
 describe('EmbeddingCache', () => {
 	const testPluginDir = '/test/plugin/dir';
 	const testCacheDir = path.join(testPluginDir, 'cache');
-	const testCacheFile = path.join(testCacheDir, 'embeddings.json');
+	const testCacheFile = path.join(testCacheDir, 'embeddings-multilingual-e5-small.json');
 
 	beforeEach(() => {
 		vi.clearAllMocks();

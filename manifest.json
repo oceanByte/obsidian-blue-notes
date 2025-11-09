@@ -1,0 +1,10 @@
+{
+  "id": "blue-notes",
+  "name": "Blue Notes",
+  "version": "0.2.1",
+  "minAppVersion": "1.9.14",
+  "description": "Search notes by meaning",
+  "author": "Albert Peci",
+  "authorUrl": "https://github.com/oceanByte",
+  "isDesktopOnly": true
+}

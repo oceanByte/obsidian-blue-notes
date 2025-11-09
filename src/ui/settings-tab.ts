@@ -85,21 +85,27 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
                 const provider = this.plugin.providerManager.getProvider()
                 if (provider && 'switchModel' in provider) {
                   try {
+                    // Switch model silently (we'll show our own combined notice)
                     await (
                       provider as {
-                        switchModel: (model: ONNXModelType) => Promise<void>;
+                        switchModel: (model: ONNXModelType, silent?: boolean) => Promise<void>;
                       }
-                    ).switchModel(newModel)
+                    ).switchModel(newModel, true)
 
                     this.plugin.cache.clear()
                     await this.plugin.cache.save()
 
-                    new Notice('Model changed! Automatically reprocessing vault with new model...', 5000)
-
                     this.display()
 
+                    // Show single notice and automatically reprocess
+                    const modelInfo = this.plugin.providerManager.getProvider()?.['getDownloader']?.()?.getModelInfo(newModel)
+                    const modelName = modelInfo?.name || newModel
+                    new Notice(`Switched to ${modelName}. Reprocessing vault...`)
+
                     // Automatically reprocess the vault with the new model
-                    await this.plugin.processor.processVault()
+                    // Pass false to suppress initial "Processing X files" notice
+                    // Progress updates and final completion will still be shown
+                    await this.plugin.processor.processVault(false)
                   } catch (error) {
                     new Notice(MESSAGES.ERROR(error.message))
                   }

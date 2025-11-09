@@ -288,8 +288,10 @@ export class ONNXProvider implements EmbeddingProvider {
 
   /**
    * Switch to a different model
+   * @param modelType - The model type to switch to
+   * @param silent - If true, suppress the success notice (default: false)
    */
-  async switchModel(modelType: ONNXModelType): Promise<void> {
+  async switchModel(modelType: ONNXModelType, silent = false): Promise<void> {
     if (modelType === this.currentModelType) {
       return
     }
@@ -312,7 +314,9 @@ export class ONNXProvider implements EmbeddingProvider {
 
     await this.loadModel(modelType)
 
-    new Notice(MESSAGES.MODEL_SWITCHED(modelType))
+    if (!silent) {
+      new Notice(MESSAGES.MODEL_SWITCHED(modelType))
+    }
   }
 
   /**

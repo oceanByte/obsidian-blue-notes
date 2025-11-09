@@ -72,7 +72,7 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
 
           return dropdown
             .setValue(
-              this.plugin.settings.provider.modelType || ONNXModelType.DEFAULT,
+              this.plugin.settings.provider.modelType || ONNXModelType.E5_SMALL,
             )
             .onChange(async (value) => {
               const previousModel = this.plugin.settings.provider.modelType

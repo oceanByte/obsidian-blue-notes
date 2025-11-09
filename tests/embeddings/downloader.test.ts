@@ -25,12 +25,12 @@ describe("ModelDownloader", () => {
 
   describe("getModelDir", () => {
     it("should return correct model directory path", () => {
-      const modelDir = downloader.getModelDir(ONNXModelType.DEFAULT);
-      expect(modelDir).toBe(path.join(testModelDir, ONNXModelType.DEFAULT));
+      const modelDir = downloader.getModelDir(ONNXModelType.E5_SMALL);
+      expect(modelDir).toBe(path.join(testModelDir, ONNXModelType.E5_SMALL));
     });
 
     it("should return different paths for different model types", () => {
-      const dir1 = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const dir1 = downloader.getModelDir(ONNXModelType.MINI_LM);
       const dir2 = downloader.getModelDir(ONNXModelType.E5_SMALL);
       expect(dir1).not.toBe(dir2);
     });
@@ -38,42 +38,42 @@ describe("ModelDownloader", () => {
 
   describe("isModelDownloaded", () => {
     it("should return false when model is not downloaded", () => {
-      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.DEFAULT);
+      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.E5_SMALL);
       expect(isDownloaded).toBe(false);
     });
 
     it("should return true when model files exist", () => {
-      const modelDir = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const modelDir = downloader.getModelDir(ONNXModelType.E5_SMALL);
       fs.mkdirSync(modelDir, { recursive: true });
       fs.writeFileSync(path.join(modelDir, "model.onnx"), "test");
       fs.writeFileSync(path.join(modelDir, "tokenizer.json"), "test");
 
-      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.DEFAULT);
+      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.E5_SMALL);
       expect(isDownloaded).toBe(true);
     });
 
     it("should return false when only model.onnx exists", () => {
-      const modelDir = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const modelDir = downloader.getModelDir(ONNXModelType.E5_SMALL);
       fs.mkdirSync(modelDir, { recursive: true });
       fs.writeFileSync(path.join(modelDir, "model.onnx"), "test");
 
-      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.DEFAULT);
+      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.E5_SMALL);
       expect(isDownloaded).toBe(false);
     });
 
     it("should return false when only tokenizer.json exists", () => {
-      const modelDir = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const modelDir = downloader.getModelDir(ONNXModelType.E5_SMALL);
       fs.mkdirSync(modelDir, { recursive: true });
       fs.writeFileSync(path.join(modelDir, "tokenizer.json"), "test");
 
-      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.DEFAULT);
+      const isDownloaded = downloader.isModelDownloaded(ONNXModelType.E5_SMALL);
       expect(isDownloaded).toBe(false);
     });
   });
 
   describe("getModelInfo", () => {
-    it("should return model info for DEFAULT model", () => {
-      const info = downloader.getModelInfo(ONNXModelType.DEFAULT);
+    it("should return model info for MINI_LM model", () => {
+      const info = downloader.getModelInfo(ONNXModelType.MINI_LM);
       expect(info.name).toBe("all-MiniLM-L6-v2");
       expect(info.dimension).toBe(384);
       expect(info.urls.model).toContain("huggingface.co");
@@ -87,7 +87,7 @@ describe("ModelDownloader", () => {
     });
 
     it("should return model info for all new models", () => {
-      const modelTypes = [ONNXModelType.E5_SMALL];
+      const modelTypes = [ONNXModelType.E5_SMALL, ONNXModelType.MINI_LM];
 
       for (const modelType of modelTypes) {
         const info = downloader.getModelInfo(modelType);
@@ -100,26 +100,26 @@ describe("ModelDownloader", () => {
     });
 
     it("should have correct dimensions for models", () => {
-      expect(downloader.getModelInfo(ONNXModelType.DEFAULT).dimension).toBe(384);
+      expect(downloader.getModelInfo(ONNXModelType.MINI_LM).dimension).toBe(384);
       expect(downloader.getModelInfo(ONNXModelType.E5_SMALL).dimension).toBe(384);
     });
   });
 
   describe("getModelPaths", () => {
     it("should return correct file paths", () => {
-      const modelDir = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const modelDir = downloader.getModelDir(ONNXModelType.E5_SMALL);
       fs.mkdirSync(modelDir, { recursive: true });
       fs.writeFileSync(path.join(modelDir, "tokenizer.json"), "test");
 
-      const paths = downloader.getModelPaths(ONNXModelType.DEFAULT);
+      const paths = downloader.getModelPaths(ONNXModelType.E5_SMALL);
       expect(paths.modelPath).toContain("model.onnx");
       expect(paths.tokenizerPath).toContain("tokenizer.json");
       expect(paths.configPath).toContain("config.json");
     });
 
     it("should return paths within model directory", () => {
-      const modelDir = downloader.getModelDir(ONNXModelType.DEFAULT);
-      const paths = downloader.getModelPaths(ONNXModelType.DEFAULT);
+      const modelDir = downloader.getModelDir(ONNXModelType.E5_SMALL);
+      const paths = downloader.getModelPaths(ONNXModelType.E5_SMALL);
 
       expect(paths.modelPath.startsWith(modelDir)).toBe(true);
       expect(paths.tokenizerPath.startsWith(modelDir)).toBe(true);
@@ -131,7 +131,7 @@ describe("ModelDownloader", () => {
     it("should return all available model types", () => {
       const models = downloader.getAllModels();
       expect(models.length).toBe(2);
-      expect(models).toContain(ONNXModelType.DEFAULT);
+      expect(models).toContain(ONNXModelType.MINI_LM);
       expect(models).toContain(ONNXModelType.E5_SMALL);
     });
   });
@@ -143,7 +143,7 @@ describe("ModelDownloader", () => {
     });
 
     it("should return downloaded models", () => {
-      const modelDir1 = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const modelDir1 = downloader.getModelDir(ONNXModelType.MINI_LM);
       fs.mkdirSync(modelDir1, { recursive: true });
       fs.writeFileSync(path.join(modelDir1, "model.onnx"), "test");
       fs.writeFileSync(path.join(modelDir1, "tokenizer.json"), "test");
@@ -155,32 +155,32 @@ describe("ModelDownloader", () => {
 
       const downloaded = downloader.getDownloadedModels();
       expect(downloaded.length).toBe(2);
-      expect(downloaded).toContain(ONNXModelType.DEFAULT);
+      expect(downloaded).toContain(ONNXModelType.MINI_LM);
       expect(downloaded).toContain(ONNXModelType.E5_SMALL);
     });
   });
 
   describe("deleteModel", () => {
     it("should return false when model does not exist", () => {
-      const deleted = downloader.deleteModel(ONNXModelType.DEFAULT);
+      const deleted = downloader.deleteModel(ONNXModelType.E5_SMALL);
       expect(deleted).toBe(false);
     });
 
     it("should delete model directory and return true", () => {
-      const modelDir = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const modelDir = downloader.getModelDir(ONNXModelType.E5_SMALL);
       fs.mkdirSync(modelDir, { recursive: true });
       fs.writeFileSync(path.join(modelDir, "model.onnx"), "test");
       fs.writeFileSync(path.join(modelDir, "tokenizer.json"), "test");
 
       expect(fs.existsSync(modelDir)).toBe(true);
 
-      const deleted = downloader.deleteModel(ONNXModelType.DEFAULT);
+      const deleted = downloader.deleteModel(ONNXModelType.E5_SMALL);
       expect(deleted).toBe(true);
       expect(fs.existsSync(modelDir)).toBe(false);
     });
 
     it("should not affect other models when deleting one", () => {
-      const modelDir1 = downloader.getModelDir(ONNXModelType.DEFAULT);
+      const modelDir1 = downloader.getModelDir(ONNXModelType.MINI_LM);
       const modelDir2 = downloader.getModelDir(ONNXModelType.E5_SMALL);
 
       fs.mkdirSync(modelDir1, { recursive: true });
@@ -191,7 +191,7 @@ describe("ModelDownloader", () => {
       fs.writeFileSync(path.join(modelDir2, "model.onnx"), "test");
       fs.writeFileSync(path.join(modelDir2, "tokenizer.json"), "test");
 
-      downloader.deleteModel(ONNXModelType.DEFAULT);
+      downloader.deleteModel(ONNXModelType.MINI_LM);
 
       expect(fs.existsSync(modelDir1)).toBe(false);
       expect(fs.existsSync(modelDir2)).toBe(true);
@@ -201,7 +201,7 @@ describe("ModelDownloader", () => {
   describe("File size estimation", () => {
     it("should return correct file sizes for all models", () => {
       const testCases = [
-        { model: ONNXModelType.DEFAULT, expectedSize: 90 },
+        { model: ONNXModelType.MINI_LM, expectedSize: 90 },
         { model: ONNXModelType.E5_SMALL, expectedSize: 80 },
       ];
 
@@ -213,7 +213,7 @@ describe("ModelDownloader", () => {
     });
 
     it("should return 0.5 MB for vocab files", () => {
-      const modelInfo = downloader.getModelInfo(ONNXModelType.DEFAULT);
+      const modelInfo = downloader.getModelInfo(ONNXModelType.MINI_LM);
       const size = (downloader as any).estimateFileSize(modelInfo, "vocab");
       expect(size).toBe(0.5);
     });

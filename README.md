@@ -49,7 +49,7 @@ The plugin automatically:
 - Indexes your vault in the background
 - Notifies you when ready
 
-**First-time setup takes a few minutes.** The plugin downloads ONNX Runtime (the engine that powers local AI) and a small AI model to enable private, offline semantic search. After this one-time setup, everything runs locally on your device.
+**First-time setup takes a few minutes.** The plugin downloads ONNX Runtime (the engine that powers local AI) and an embedding model to enable private, offline semantic search. After this one-time setup, everything runs locally on your device.
 
 ### Step 2: Start Searching
 1. Open **Command Palette** (`Cmd/Ctrl + P`)
@@ -65,8 +65,8 @@ Different models offer trade-offs between speed, language support, and accuracy.
 
 Open Settings → Blue Notes → Model selection to choose one of the following:
 
-- **all-MiniLM-L6-v2 (default)** - Small, fast, English-only model with solid performance
-- **Multilingual E5 Small** - Efficient multilingual model supporting 100+ languages
+- **Multilingual E5 Small (default)** - Efficient multilingual model supporting 100+ languages with excellent performance
+- **all-MiniLM-L6-v2** - Small, fast, but English-only model (choose if performance matters more than accuracy)
 
 ## How to Use
 
@@ -100,7 +100,7 @@ Want to ask questions about your notes?
 - ✅ Your notes **never leave your device**
 - ✅ No tracking or data collection
 
-**One-time download:** When you first use the plugin, it downloads ONNX Runtime binaries (~50-127MB depending on your platform) and a ~90MB AI model from HuggingFace. After that, everything is local.
+**One-time download:** When you first use the plugin, it downloads ONNX Runtime binaries (~50-127MB depending on your platform) and a ~113MB AI model from HuggingFace. After that, everything is local.
 
 ### AI Chat (Optional Feature)
 
@@ -150,8 +150,8 @@ All data stays local and can be safely deleted anytime.
 
 **Model won't download**
 - Check your internet connection
-- [Download the default model manually](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-- [Download the multilingual E5 model manually](https://huggingface.co/intfloat/multilingual-e5-small)
+- [Download the default model manually](https://huggingface.co/intfloat/multilingual-e5-small)
+- [Download the all-MiniLM-L6-v2 model manually](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 
 **Plugin feels slow**
 - Normal for first-time processing

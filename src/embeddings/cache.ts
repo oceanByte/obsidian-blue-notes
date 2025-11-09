@@ -240,8 +240,8 @@ export class EmbeddingCache {
 
   private createEmptyCache(): CacheData {
     return {
-      version: '2.0.0',
-      model: 'all-MiniLM-L6-v2',
+      version: '1.0.0',
+      model: 'multilingual-e5-small',
       created: Date.now(),
       embeddings: {},
     }

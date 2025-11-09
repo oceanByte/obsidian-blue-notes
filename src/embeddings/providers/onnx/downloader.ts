@@ -27,19 +27,6 @@ interface ModelInfo {
  * Model registry with download URLs from HuggingFace
  */
 const MODEL_REGISTRY: Partial<Record<ONNXModelType, ModelInfo>> = {
-  [ONNXModelType.DEFAULT]: {
-    name: 'all-MiniLM-L6-v2',
-    dimension: 384,
-    urls: {
-      model:
-        'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx',
-      vocab:
-        'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json',
-      config:
-        'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json',
-    },
-    description: 'Fast and efficient English embeddings (~90MB)',
-  },
   [ONNXModelType.E5_SMALL]: {
     name: 'multilingual-e5-small',
     dimension: 384,
@@ -51,7 +38,20 @@ const MODEL_REGISTRY: Partial<Record<ONNXModelType, ModelInfo>> = {
       config:
         'https://huggingface.co/intfloat/multilingual-e5-small/resolve/main/onnx/config.json',
     },
-    description: 'Multilingual model supporting 100+ languages with efficient int8 quantization (~113MB)',
+    description: 'Multilingual model supporting 100+ languages with efficient int8 quantization (default, ~113MB)',
+  },
+  [ONNXModelType.MINI_LM]: {
+    name: 'all-MiniLM-L6-v2',
+    dimension: 384,
+    urls: {
+      model:
+        'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx',
+      vocab:
+        'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json',
+      config:
+        'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json',
+    },
+    description: 'Fast and efficient English-only embeddings (~90MB)',
   },
 }
 /**

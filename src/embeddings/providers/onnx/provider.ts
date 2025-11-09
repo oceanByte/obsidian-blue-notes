@@ -46,7 +46,7 @@ export class ONNXProvider implements EmbeddingProvider {
     this.downloader = new ModelDownloader(this.modelDir)
 
     this.currentModelType =
-      this.plugin.settings?.provider?.modelType || ONNXModelType.DEFAULT
+      this.plugin.settings?.provider?.modelType || ONNXModelType.E5_SMALL
 
     const pluginDataDir = getPluginDataDir(this.plugin.app)
     this.binaryDownloader = new RuntimeBinaryDownloader(pluginDataDir, this.ONNX_VERSION)

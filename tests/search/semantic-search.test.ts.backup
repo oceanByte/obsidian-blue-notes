@@ -1,0 +1,569 @@
+import { SemanticSearch } from "../../src/search/semantic-search";
+import { EmbeddingCache } from "../../src/embeddings/cache";
+import { TFile, App } from "obsidian";
+
+const mockPlugin = {
+  app: new App(),
+  providerManager: {
+    getProvider: vi.fn(),
+  },
+  fileProcessor: {
+    extractText: vi.fn(),
+  },
+  processor: {
+    processFile: vi.fn(),
+  },
+};
+
+describe("SemanticSearch", () => {
+  let semanticSearch: SemanticSearch;
+  let mockCache: Mocked<EmbeddingCache>;
+  let mockProvider: any;
+
+  beforeEach(() => {
+    mockCache = {
+      get: vi.fn(),
+      set: vi.fn(),
+      getAll: vi.fn().mockReturnValue({}),
+      getAllChunksFlattened: vi.fn().mockReturnValue([]),
+      remove: vi.fn(),
+      has: vi.fn(),
+      save: vi.fn(),
+      getStats: vi.fn().mockReturnValue({ count: 0, size: 0 }),
+    } as any;
+
+    mockProvider = {
+      embed: vi.fn().mockResolvedValue(new Array(384).fill(0.1)),
+    };
+
+    mockPlugin.providerManager.getProvider.mockReturnValue(mockProvider);
+    mockPlugin.app.vault.getMarkdownFiles = vi.fn().mockReturnValue([]);
+    mockPlugin.app.vault.getAbstractFileByPath = vi.fn();
+
+    semanticSearch = new SemanticSearch(mockPlugin as any, mockCache);
+  });
+
+  describe("search", () => {
+    it("should throw error when no provider available", async () => {
+      mockPlugin.providerManager.getProvider.mockReturnValue(null);
+
+      await expect(semanticSearch.search("test query")).rejects.toThrow(
+        "No embedding provider available",
+      );
+    });
+
+    it("should return empty array when no cached embeddings", async () => {
+      mockCache.getAllChunksFlattened.mockReturnValue([]);
+
+      const results = await semanticSearch.search("test query");
+
+      expect(results).toEqual([]);
+    });
+
+    it("should generate embedding for query", async () => {
+      mockCache.getAllChunksFlattened.mockReturnValue([]);
+
+      await semanticSearch.search("test query");
+
+      expect(mockProvider.embed).toHaveBeenCalledWith("test query");
+    });
+
+    it("should trim whitespace from query before embedding", async () => {
+      mockCache.getAllChunksFlattened.mockReturnValue([]);
+
+      await semanticSearch.search("  test query  ");
+
+      expect(mockProvider.embed).toHaveBeenCalledWith("test query");
+    });
+
+    it("should return matching results above threshold", async () => {
+      const file1 = new TFile("file1.md");
+      const file2 = new TFile("file2.md");
+
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "file1.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.5),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+        {
+          filePath: "file2.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.1),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 50, tags: [], folder: "" },
+        },
+      ]);
+
+      mockProvider.embed.mockResolvedValue(new Array(384).fill(0.5));
+      mockPlugin.app.vault.getAbstractFileByPath
+        .mockReturnValueOnce(file1)
+        .mockReturnValueOnce(file2);
+
+      const results = await semanticSearch.search("test", { threshold: 0.5 });
+
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0].similarity).toBeGreaterThanOrEqual(0.5);
+    });
+
+    it("should sort results by similarity descending", async () => {
+      const file1 = new TFile("file1.md");
+      const file2 = new TFile("file2.md");
+
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "file1.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.3),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+        {
+          filePath: "file2.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.7),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 50, tags: [], folder: "" },
+        },
+      ]);
+
+      mockProvider.embed.mockResolvedValue(new Array(384).fill(0.7));
+      mockPlugin.app.vault.getAbstractFileByPath
+        .mockReturnValueOnce(file1)
+        .mockReturnValueOnce(file2);
+
+      const results = await semanticSearch.search("test", { threshold: 0 });
+
+      expect(results[0].similarity).toBeGreaterThanOrEqual(
+        results[1].similarity,
+      );
+    });
+
+    it("should limit results to specified count", async () => {
+      const mockChunks: any = [];
+      for (let i = 0; i < 20; i++) {
+        mockChunks.push({
+          filePath: `file${i}.md`,
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.5),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        });
+      }
+      mockCache.getAllChunksFlattened.mockReturnValue(mockChunks);
+      mockProvider.embed.mockResolvedValue(new Array(384).fill(0.5));
+      mockPlugin.app.vault.getAbstractFileByPath.mockImplementation(
+        (path: string) => new TFile(path),
+      );
+
+      const results = await semanticSearch.search("test", { limit: 5 });
+
+      expect(results.length).toBeLessThanOrEqual(5);
+    });
+
+    it("should filter by folder", async () => {
+      const file1 = new TFile("notes/file1.md");
+      const file2 = new TFile("other/file2.md");
+
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "notes/file1.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.5),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "notes" },
+        },
+        {
+          filePath: "other/file2.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.5),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 50, tags: [], folder: "other" },
+        },
+      });
+
+      mockProvider.embed.mockResolvedValue(new Array(384).fill(0.5));
+      mockPlugin.app.vault.getAbstractFileByPath.mockImplementation(
+        (path: string) => new TFile(path),
+      );
+
+      const results = await semanticSearch.search("test", {
+        folder: "notes",
+        threshold: 0,
+      });
+
+      expect(results.every((r) => r.path.startsWith("notes"))).toBe(true);
+    });
+
+    it("should filter by tags", async () => {
+      const file1 = new TFile("file1.md");
+      const file2 = new TFile("file2.md");
+
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "file1.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.5),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: ["#work"], folder: "" },
+        },
+        {
+          filePath: "file2.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.5),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 50, tags: ["#personal"], folder: "" },
+        },
+      ]);
+
+      mockProvider.embed.mockResolvedValue(new Array(384).fill(0.5));
+      mockPlugin.app.vault.getAbstractFileByPath
+        .mockReturnValueOnce(file1)
+        .mockReturnValueOnce(file2);
+
+      const results = await semanticSearch.search("test", {
+        tags: ["#work"],
+        threshold: 0,
+      });
+
+      expect(results.every((r) => r.metadata.tags.includes("#work"))).toBe(
+        true,
+      );
+    });
+
+    it("should include file metadata in results", async () => {
+      const file1 = new TFile("file1.md");
+
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "file1.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.5),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: ["#tag1"], folder: "notes" },
+        },
+      ]);
+
+      mockProvider.embed.mockResolvedValue(new Array(384).fill(0.5));
+      mockPlugin.app.vault.getAbstractFileByPath.mockReturnValue(file1);
+
+      const results = await semanticSearch.search("test", { threshold: 0 });
+
+      expect(results[0].metadata.wordCount).toBe(100);
+      expect(results[0].metadata.tags).toContain("#tag1");
+      expect(results[0].metadata.folder).toBe("notes");
+    });
+  });
+
+  describe("findSimilar", () => {
+    it("should throw error when no provider available", async () => {
+      mockPlugin.providerManager.getProvider.mockReturnValue(null);
+      const file = new TFile("test.md");
+      mockPlugin.fileProcessor.extractText.mockResolvedValue(
+        "test content with enough words",
+      );
+
+      await expect(semanticSearch.findSimilar(file)).rejects.toThrow();
+    });
+
+    it("should use cached embedding if available", async () => {
+      const file = new TFile("test.md");
+      const fileVector = new Array(384).fill(0.5);
+
+      mockPlugin.fileProcessor.extractText.mockResolvedValue("content");
+      mockCache.get.mockReturnValue([
+        {
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+        }
+      ]);
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "test.md",
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+      ]);
+
+      await semanticSearch.findSimilar(file);
+
+      expect(mockProvider.embed).not.toHaveBeenCalled();
+    });
+
+    it("should process file if not cached", async () => {
+      const file = new TFile("test.md");
+      const fileVector = new Array(384).fill(0.5);
+
+      mockPlugin.fileProcessor.extractText.mockResolvedValue("content");
+      mockCache.get.mockReturnValueOnce(null).mockReturnValueOnce([
+        {
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+        }
+      ]);
+      mockPlugin.processor.processFile.mockResolvedValue(true);
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "test.md",
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+      ]);
+
+      await semanticSearch.findSimilar(file);
+
+      expect(mockPlugin.processor.processFile).toHaveBeenCalledWith(file, true);
+    });
+
+    it("should exclude the source file from results", async () => {
+      const file = new TFile("test.md");
+      const other = new TFile("other.md");
+      const fileVector = new Array(384).fill(0.5);
+
+      mockPlugin.fileProcessor.extractText.mockResolvedValue("content");
+      mockCache.get.mockReturnValue([
+        {
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+        }
+      ]);
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "test.md",
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+        {
+          filePath: "other.md",
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 50, tags: [], folder: "" },
+        },
+      ]);
+      mockPlugin.app.vault.getAbstractFileByPath.mockReturnValue(other);
+
+      const results = await semanticSearch.findSimilar(file, { threshold: 0 });
+
+      expect(results.every((r) => r.path !== "test.md")).toBe(true);
+    });
+
+    it("should return similar files sorted by similarity", async () => {
+      const file = new TFile("test.md");
+      const file1 = new TFile("file1.md");
+      const file2 = new TFile("file2.md");
+      const fileVector = new Array(384).fill(0.5);
+
+      mockPlugin.fileProcessor.extractText.mockResolvedValue("content");
+      mockCache.get.mockReturnValue([
+        {
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+        }
+      ]);
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "test.md",
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+        {
+          filePath: "file1.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.3),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+        {
+          filePath: "file2.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.7),
+          hash: "hash2",
+          timestamp: Date.now(),
+          metadata: { wordCount: 50, tags: [], folder: "" },
+        },
+      });
+      mockPlugin.app.vault.getAbstractFileByPath
+        .mockReturnValueOnce(file1)
+        .mockReturnValueOnce(file2);
+
+      const results = await semanticSearch.findSimilar(file, { threshold: 0 });
+
+      expect(results[0].similarity).toBeGreaterThanOrEqual(
+        results[1]?.similarity || 0,
+      );
+    });
+
+    it("should respect threshold parameter", async () => {
+      const file = new TFile("test.md");
+      const fileVector = new Array(384).fill(0.9);
+
+      mockPlugin.fileProcessor.extractText.mockResolvedValue("content");
+      mockCache.get.mockReturnValue([
+        {
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+        }
+      ]);
+      mockCache.getAllChunksFlattened.mockReturnValue([
+        {
+          filePath: "test.md",
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+        {
+          filePath: "file1.md",
+          chunkId: "chunk-0",
+          vector: new Array(384).fill(0.1),
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+      });
+
+      const results = await semanticSearch.findSimilar(file, {
+        threshold: 0.5,
+      });
+
+      expect(results.every((r) => r.similarity >= 0.5)).toBe(true);
+    });
+
+    it("should respect limit parameter", async () => {
+      const file = new TFile("test.md");
+      const fileVector = new Array(384).fill(0.5);
+      const mockChunks: any = [
+        {
+          filePath: "test.md",
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        },
+      ];
+
+      for (let i = 0; i < 20; i++) {
+        mockChunks.push({
+          filePath: `file${i}.md`,
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+          metadata: { wordCount: 100, tags: [], folder: "" },
+        });
+      }
+
+      mockPlugin.fileProcessor.extractText.mockResolvedValue("content");
+      mockCache.get.mockReturnValue([
+        {
+          chunkId: "chunk-0",
+          vector: fileVector,
+          chunk: { chunkId: "chunk-0", content: "test", headings: [], startLine: 0, endLine: 0, wordCount: 1, preview: "test" },
+        }
+      ]);
+      mockCache.getAllChunksFlattened.mockReturnValue(mockChunks);
+      mockPlugin.app.vault.getAbstractFileByPath.mockImplementation(
+        (path: string) => new TFile(path),
+      );
+
+      const results = await semanticSearch.findSimilar(file, {
+        limit: 5,
+        threshold: 0,
+      });
+
+      expect(results.length).toBeLessThanOrEqual(5);
+    });
+
+    it("should handle processing failure gracefully", async () => {
+      const file = new TFile("test.md");
+
+      mockPlugin.fileProcessor.extractText.mockResolvedValue("content");
+      mockCache.get.mockReturnValue(null);
+      mockPlugin.processor.processFile.mockRejectedValue(
+        new Error("Processing failed"),
+      );
+
+      await expect(semanticSearch.findSimilar(file)).rejects.toThrow(
+        "Processing failed",
+      );
+    });
+  });
+
+  describe("getIndexStats", () => {
+    it("should return total note count", () => {
+      mockPlugin.app.vault.getMarkdownFiles.mockReturnValue([
+        new TFile("file1.md"),
+        new TFile("file2.md"),
+        new TFile("file3.md"),
+      ]);
+      mockCache.getStats.mockReturnValue({
+        count: 2,
+        size: 1000,
+        oldestTimestamp: 0,
+        newestTimestamp: 0,
+      });
+
+      const stats = semanticSearch.getIndexStats();
+
+      expect(stats.totalNotes).toBe(3);
+    });
+
+    it("should return cached note count", () => {
+      mockPlugin.app.vault.getMarkdownFiles.mockReturnValue([]);
+      mockCache.getStats.mockReturnValue({
+        count: 5,
+        size: 1000,
+        oldestTimestamp: 0,
+        newestTimestamp: 0,
+      });
+
+      const stats = semanticSearch.getIndexStats();
+
+      expect(stats.cachedNotes).toBe(5);
+    });
+
+    it("should return cache size", () => {
+      mockPlugin.app.vault.getMarkdownFiles.mockReturnValue([]);
+      mockCache.getStats.mockReturnValue({
+        count: 0,
+        size: 5000,
+        oldestTimestamp: 0,
+        newestTimestamp: 0,
+      });
+
+      const stats = semanticSearch.getIndexStats();
+
+      expect(stats.cacheSize).toBe(5000);
+    });
+
+    it("should handle empty vault", () => {
+      mockPlugin.app.vault.getMarkdownFiles.mockReturnValue([]);
+      mockCache.getStats.mockReturnValue({
+        count: 0,
+        size: 0,
+        oldestTimestamp: 0,
+        newestTimestamp: 0,
+      });
+
+      const stats = semanticSearch.getIndexStats();
+
+      expect(stats.totalNotes).toBe(0);
+      expect(stats.cachedNotes).toBe(0);
+      expect(stats.cacheSize).toBe(0);
+    });
+  });
+});

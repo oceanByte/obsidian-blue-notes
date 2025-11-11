@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/oceanByte/obsidian-blue-notes/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Obsidian Community
+    url: https://obsidian.md/community
+    about: Join the broader Obsidian community

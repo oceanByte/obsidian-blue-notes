@@ -32,8 +32,8 @@ export class HuggingFaceTokenizer {
       throw new Error(`Tokenizer file not found at ${tokenizerPath}`)
     }
 
-    // Dynamically require tokenizers only when needed (after ONNX runtime is loaded)
-    const { Tokenizer } = require('@huggingface/tokenizers')
+    // Dynamically import tokenizers only when needed (after ONNX runtime is loaded)
+    const { Tokenizer } = await import('@huggingface/tokenizers')
 
     const tokenizerJson = JSON.parse(fs.readFileSync(tokenizerPath, 'utf-8'))
     const tokenizerConfig = HuggingFaceTokenizer.loadConfig(modelDir)

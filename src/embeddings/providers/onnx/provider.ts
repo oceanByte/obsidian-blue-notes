@@ -3,8 +3,8 @@ import * as path from 'path'
 import { Notice } from 'obsidian'
 
 import {
-  type EmbeddingProvider,
   EmbeddingContext,
+  type EmbeddingProvider,
   ONNXModelType,
 } from '../../provider-interface'
 import { getPluginDataDir, getPluginModelsDir } from '../../../utils/plugin-paths'

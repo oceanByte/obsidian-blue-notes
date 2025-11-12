@@ -34,8 +34,9 @@ The optional AI chat feature uses your own API key and connects to the internet 
 
 - 🔍 **Semantic Search** – Find notes by meaning, not just keywords
 - 🔒 **Private & Offline** – Searching happens on your computer, no data leaves your device
-- 🔗 **Connected Thinking** – Discover related ideas automatically across your vault
+- 🌍 **Multi-Language Support** – Works with 100+ languages out of the box
 - ⚡ **Fast Results** – ONNX Runtime keeps semantic search fast on your device
+- 📦 **Minimal Dependencies** – Lightweight footprint with minimal external dependencies
 - 💬 **AI Chat (Optional)** – Ask questions about your notes using your own API key
 
 ## Getting Started

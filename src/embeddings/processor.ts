@@ -63,6 +63,8 @@ export class EmbeddingProcessor {
       return
     }
 
+    let progressNotice: Notice | null = null
+
     try {
       this.queue.setProcessing(true)
       const allFiles = this.plugin.app.vault.getMarkdownFiles()
@@ -70,11 +72,12 @@ export class EmbeddingProcessor {
       const files = await this.filterFilesByWordCount(allFiles)
 
       if (showProgress) {
-        new Notice(
+        progressNotice = new Notice(
           MESSAGES.PROCESSING_FILES(
             files.length,
             allFiles.length - files.length,
           ),
+          0,
         )
       }
 
@@ -111,13 +114,13 @@ export class EmbeddingProcessor {
         const batchTime = Date.now() - batchStartTime
         const totalProcessed = processed + cached
 
-        if (showProgress && (i % 5 === 0 || i === batches.length - 1)) {
+        if (showProgress && progressNotice && (i % 5 === 0 || i === batches.length - 1)) {
           const eta = this.batchProcessor.estimateTimeRemaining(
             startTime,
             totalProcessed,
             files.length,
           )
-          new Notice(
+          progressNotice.setMessage(
             `Progress: ${totalProcessed}/${files.length} • ${processed} new, ${cached} cached • ETA: ${eta}`,
           )
         }
@@ -132,7 +135,12 @@ export class EmbeddingProcessor {
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(1)
       const stats = this.cache.getStats()
       const message = `✓ Vault processed in ${totalTime}s: ${processed} new, ${cached} cached, ${allFiles.length - files.length} skipped, ${failed} failed (${stats.chunkCount} total chunks)`
-      new Notice(message)
+
+      if (progressNotice) {
+        progressNotice.hide()
+      }
+
+      new Notice(message, 5000)
       Logger.info(message)
     } finally {
       this.queue.setProcessing(false)

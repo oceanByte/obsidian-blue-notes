@@ -253,7 +253,10 @@ export class EmbeddingProcessor {
     }
 
     await this.cache.save()
-    new Notice(MESSAGES.PROCESSING_COMPLETE(processed, cached))
+
+    if (processed > 0 || cached > 0) {
+      new Notice(MESSAGES.PROCESSING_COMPLETE(processed, cached))
+    }
   }
 
   /**

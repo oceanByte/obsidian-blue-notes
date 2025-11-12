@@ -1,5 +1,11 @@
 # blue-notes
 
+## 1.2.1
+
+### Patch Changes
+
+- [#20](https://github.com/oceanByte/obsidian-blue-notes/pull/20) [`73c8fe7`](https://github.com/oceanByte/obsidian-blue-notes/commit/73c8fe7463d47464b8863572a36e53d983faf446) Thanks [@oceanByte](https://github.com/oceanByte)! - Fix deprecated and non-working chat models. Removed deprecated Groq mixtral-8x7b-32768 model and added qwen/qwen3-32b as replacement. Updated Requesty provider to use correct model IDs: fixed google/gemini-2.0-flash-exp to google/gemini-2.0-flash-001, replaced deprecated anthropic/claude-3.5-sonnet with anthropic/claude-3-7-sonnet-20250219, and removed non-functional models.
+
 ## 1.2.0
 
 ### Minor Changes

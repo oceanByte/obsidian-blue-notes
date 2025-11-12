@@ -114,14 +114,9 @@ export class EmbeddingProcessor {
         const batchTime = Date.now() - batchStartTime
         const totalProcessed = processed + cached
 
-        if (showProgress && progressNotice && (i % 5 === 0 || i === batches.length - 1)) {
-          const eta = this.batchProcessor.estimateTimeRemaining(
-            startTime,
-            totalProcessed,
-            files.length,
-          )
+        if (showProgress && progressNotice) {
           progressNotice.setMessage(
-            `Progress: ${totalProcessed}/${files.length} • ${processed} new, ${cached} cached • ETA: ${eta}`,
+            `Progress: ${totalProcessed}/${files.length} • ${processed} new, ${cached} cached`,
           )
         }
 

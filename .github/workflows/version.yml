@@ -45,6 +45,8 @@ jobs:
 
       - name: Create Git Tag and Release
         if: steps.changesets.outputs.hasChangesets == 'false' && steps.changesets.outputs.pullRequestNumber == ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -58,6 +60,12 @@ jobs:
             exit 0
           fi
 
-          # Create and push tag
+          # Create and push tag using PAT to trigger release workflow
           git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin "$VERSION"
+
+          # Use PAT if available, otherwise fall back to GITHUB_TOKEN
+          if [ -n "${{ secrets.GH_PAT }}" ]; then
+            git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git "$VERSION"
+          else
+            git push origin "$VERSION"
+          fi

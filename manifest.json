@@ -3,7 +3,7 @@
   "name": "Blue Notes",
   "version": "1.2.1",
   "minAppVersion": "1.9.14",
-  "description": "Search notes by meaning",
+  "description": "Search your notes by meaning and chat with your vault to uncover deeper insights.",
   "author": "Albert Peci",
   "authorUrl": "https://github.com/oceanByte",
   "isDesktopOnly": true

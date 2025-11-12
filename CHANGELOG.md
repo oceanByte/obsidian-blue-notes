@@ -1,5 +1,13 @@
 # blue-notes
 
+## 1.2.0
+
+### Minor Changes
+
+- [#17](https://github.com/oceanByte/obsidian-blue-notes/pull/17) [`8a993a4`](https://github.com/oceanByte/obsidian-blue-notes/commit/8a993a40796a5d47d33b2027e61ffbb88878ddba) Thanks [@oceanByte](https://github.com/oceanByte)! - Improve vault processing progress notifications. Use a single updating notification that refreshes after every batch instead of creating multiple stacked notifications. Remove ETA display and only show notifications when files are actually processed. Progress updates are now real-time and less intrusive.
+
+- [#17](https://github.com/oceanByte/obsidian-blue-notes/pull/17) [`8a993a4`](https://github.com/oceanByte/obsidian-blue-notes/commit/8a993a40796a5d47d33b2027e61ffbb88878ddba) Thanks [@oceanByte](https://github.com/oceanByte)! - Add token-aware chunking to prevent content truncation. The system now automatically detects token limits from model config files and adjusts chunk sizes accordingly (using 0.75 word-to-token ratio). This ensures all content is embedded without silent truncation, fixing information loss in embeddings.
+
 ## 1.1.1
 
 ### Patch Changes

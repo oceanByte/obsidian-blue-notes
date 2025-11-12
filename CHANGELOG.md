@@ -1,5 +1,11 @@
 # blue-notes
 
+## 1.1.1
+
+### Patch Changes
+
+- [#12](https://github.com/oceanByte/obsidian-blue-notes/pull/12) [`bc601b2`](https://github.com/oceanByte/obsidian-blue-notes/commit/bc601b21a1269a5f35fa7158cf7e91457365a17c) Thanks [@oceanByte](https://github.com/oceanByte)! - Replace tar package with native Node.js implementation using zlib module. This removes an external dependency while maintaining full functionality for extracting npm package tarballs. The plugin now has a more lightweight footprint with minimal external dependencies.
+
 ## 1.1.0
 
 ### Minor Changes

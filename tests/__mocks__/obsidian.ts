@@ -83,4 +83,42 @@ export class SuggestModal<T> {
 	close(): void {}
 }
 
-export const requestUrl = vi.fn();
+export const requestUrl = vi.fn(async (options: {
+	url: string;
+	method?: string;
+	headers?: Record<string, string>;
+	body?: string;
+}) => {
+	const response = await fetch(options.url, {
+		method: options.method || 'GET',
+		headers: options.headers,
+		body: options.body,
+	});
+
+	const contentType = response.headers.get('content-type') || '';
+	let json: any;
+	let text: string;
+	let arrayBuffer: ArrayBuffer;
+
+	if (contentType.includes('application/json')) {
+		text = await response.text();
+		json = JSON.parse(text);
+		arrayBuffer = new TextEncoder().encode(text).buffer;
+	} else {
+		arrayBuffer = await response.arrayBuffer();
+		text = new TextDecoder().decode(arrayBuffer);
+		try {
+			json = JSON.parse(text);
+		} catch {
+			json = null;
+		}
+	}
+
+	return {
+		status: response.status,
+		json,
+		text,
+		arrayBuffer,
+		headers: Object.fromEntries(response.headers.entries()),
+	};
+});

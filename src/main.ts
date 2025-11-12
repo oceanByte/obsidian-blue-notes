@@ -254,6 +254,12 @@ export default class SemanticNotesPlugin extends Plugin {
       await this.providerManager.initialize()
       Logger.info('Provider initialized with runtime and model ready')
 
+      const provider = this.providerManager.getProvider()
+      if (provider && 'getTokenLimit' in provider) {
+        const tokenLimit = (provider as any).getTokenLimit()
+        this.processor.updateTokenLimit(tokenLimit)
+      }
+
       if (this.settingsTab && this.settingsTab.containerEl.childElementCount > 0) {
         this.settingsTab.display()
         Logger.debug('Settings UI refreshed after downloads')

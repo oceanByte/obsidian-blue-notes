@@ -93,13 +93,18 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
 
                     await this.plugin.cache.switchModel(newModel)
 
+                    if ('getTokenLimit' in provider) {
+                      const tokenLimit = (provider as any).getTokenLimit()
+                      this.plugin.processor.updateTokenLimit(tokenLimit)
+                    }
+
                     this.display()
 
                     const modelInfo = this.plugin.providerManager.getProvider()?.['getDownloader']?.()?.getModelInfo(newModel)
                     const modelName = modelInfo?.name || newModel
                     new Notice(`Switched to ${modelName}. Processing vault...`)
 
-                    await this.plugin.processor.processVault(false)
+                    await this.plugin.processor.processVault(true)
                   } catch (error) {
                     new Notice(MESSAGES.ERROR(error.message))
                   }

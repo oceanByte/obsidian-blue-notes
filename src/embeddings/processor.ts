@@ -20,18 +20,32 @@ export class EmbeddingProcessor {
   private stats: ProcessingStats
   private batchProcessor: BatchProcessor
   private queue: ProcessingQueue
+  private tokenLimit: number
 
-  constructor(plugin: SemanticNotesPlugin, cache: EmbeddingCache) {
+  constructor(plugin: SemanticNotesPlugin, cache: EmbeddingCache, tokenLimit?: number) {
     this.plugin = plugin
     this.cache = cache
     this.fileProcessor = new FileProcessor(plugin.app.vault, plugin.app)
-    this.chunker = new NoteChunker()
+    this.tokenLimit = tokenLimit || 512
+    const maxWords = this.calculateMaxWords(this.tokenLimit)
+    this.chunker = new NoteChunker({ maxWords })
     this.stats = new ProcessingStats()
     this.batchProcessor = new BatchProcessor({
       batchSize: plugin.settings.processing.batchSize,
       adaptiveBatching: plugin.settings.processing.adaptiveBatching,
     })
     this.queue = new ProcessingQueue()
+  }
+
+  private calculateMaxWords(tokenLimit: number): number {
+    return Math.floor(tokenLimit * 0.75)
+  }
+
+  updateTokenLimit(tokenLimit: number): void {
+    this.tokenLimit = tokenLimit
+    const maxWords = this.calculateMaxWords(tokenLimit)
+    this.chunker = new NoteChunker({ maxWords })
+    Logger.info(`Updated chunker configuration: tokenLimit=${tokenLimit}, maxWords=${maxWords}`)
   }
 
   /**
@@ -49,6 +63,8 @@ export class EmbeddingProcessor {
       return
     }
 
+    let progressNotice: Notice | null = null
+
     try {
       this.queue.setProcessing(true)
       const allFiles = this.plugin.app.vault.getMarkdownFiles()
@@ -56,11 +72,12 @@ export class EmbeddingProcessor {
       const files = await this.filterFilesByWordCount(allFiles)
 
       if (showProgress) {
-        new Notice(
+        progressNotice = new Notice(
           MESSAGES.PROCESSING_FILES(
             files.length,
             allFiles.length - files.length,
           ),
+          0,
         )
       }
 
@@ -97,14 +114,9 @@ export class EmbeddingProcessor {
         const batchTime = Date.now() - batchStartTime
         const totalProcessed = processed + cached
 
-        if (showProgress && (i % 5 === 0 || i === batches.length - 1)) {
-          const eta = this.batchProcessor.estimateTimeRemaining(
-            startTime,
-            totalProcessed,
-            files.length,
-          )
-          new Notice(
-            `Progress: ${totalProcessed}/${files.length} • ${processed} new, ${cached} cached • ETA: ${eta}`,
+        if (showProgress && progressNotice) {
+          progressNotice.setMessage(
+            `Progress: ${totalProcessed}/${files.length} • ${processed} new, ${cached} cached`,
           )
         }
 
@@ -118,7 +130,12 @@ export class EmbeddingProcessor {
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(1)
       const stats = this.cache.getStats()
       const message = `✓ Vault processed in ${totalTime}s: ${processed} new, ${cached} cached, ${allFiles.length - files.length} skipped, ${failed} failed (${stats.chunkCount} total chunks)`
-      new Notice(message)
+
+      if (progressNotice) {
+        progressNotice.hide()
+      }
+
+      new Notice(message, 5000)
       Logger.info(message)
     } finally {
       this.queue.setProcessing(false)
@@ -239,7 +256,10 @@ export class EmbeddingProcessor {
     }
 
     await this.cache.save()
-    new Notice(MESSAGES.PROCESSING_COMPLETE(processed, cached))
+
+    if (processed > 0 || cached > 0) {
+      new Notice(MESSAGES.PROCESSING_COMPLETE(processed, cached))
+    }
   }
 
   /**

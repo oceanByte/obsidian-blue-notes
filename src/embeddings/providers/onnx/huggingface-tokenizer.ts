@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { Tokenizer } from '@huggingface/tokenizers'
 
 interface TokenizerInputs {
   input_ids: number[];
@@ -31,9 +32,6 @@ export class HuggingFaceTokenizer {
     if (!fs.existsSync(tokenizerPath)) {
       throw new Error(`Tokenizer file not found at ${tokenizerPath}`)
     }
-
-    // Dynamically require tokenizers only when needed (after ONNX runtime is loaded)
-    const { Tokenizer } = require('@huggingface/tokenizers')
 
     const tokenizerJson = JSON.parse(fs.readFileSync(tokenizerPath, 'utf-8'))
     const tokenizerConfig = HuggingFaceTokenizer.loadConfig(modelDir)

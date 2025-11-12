@@ -1,9 +1,9 @@
 import { TFile } from 'obsidian'
 
 import type { Chunk } from '../chunking/types'
-import { EmbeddingContext } from '../embeddings/provider-interface'
 import { cosineSimilarity } from '../utils/vector-math'
 import { EmbeddingCache } from '../embeddings/cache'
+import { EmbeddingContext } from '../embeddings/provider-interface'
 import { Logger } from '../utils/logger'
 
 import type SemanticNotesPlugin from '../main'

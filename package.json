@@ -31,7 +31,6 @@
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
     "@types/node": "^24.10.0",
-    "@types/tar": "^6.1.13",
     "builtin-modules": "5.0.0",
     "esbuild": "0.25.10",
     "eslint": "^9.39.1",
@@ -44,7 +43,6 @@
   },
   "dependencies": {
     "@huggingface/tokenizers": "0.0.5",
-    "onnxruntime-node": "^1.23.2",
-    "tar": "^7.5.2"
+    "onnxruntime-node": "^1.23.2"
   }
 }

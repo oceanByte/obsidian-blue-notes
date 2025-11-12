@@ -32,7 +32,7 @@ async function getGitDiff() {
     if (diff.trim()) {
       return diff;
     }
-  } catch (e) {
+  } catch {
     // If that fails, try staged changes
   }
 
@@ -41,7 +41,7 @@ async function getGitDiff() {
     if (diff.trim()) {
       return diff;
     }
-  } catch (e) {
+  } catch {
     // Ignore
   }
 
@@ -49,7 +49,7 @@ async function getGitDiff() {
   try {
     const diff = execSync('git diff', { encoding: 'utf-8' });
     return diff;
-  } catch (e) {
+  } catch {
     return '';
   }
 }

@@ -70,7 +70,7 @@ export async function downloadFile(
         if (fs.existsSync(tmpPath)) {
           fs.unlinkSync(tmpPath)
         }
-      } catch (error) {
+      } catch {
         // Ignore cleanup errors
       }
     }
@@ -79,7 +79,7 @@ export async function downloadFile(
       let resolvedUrl: string
       try {
         resolvedUrl = new URL(targetUrl, baseUrl ?? url).toString()
-      } catch (error) {
+      } catch {
         cleanup()
         reject(new Error(`Invalid URL: ${targetUrl}`))
         return

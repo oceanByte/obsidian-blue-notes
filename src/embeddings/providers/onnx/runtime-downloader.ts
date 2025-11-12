@@ -1,11 +1,11 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import * as tar from 'tar'
-import { PlatformDetector } from './platform-detector'
-import { InstallationStateManager } from './installation-state'
-import { Logger } from '../../../utils/logger'
 import { downloadFile, DownloadProgress } from '../../../utils/http-downloader'
 import { ensureDirectoryExists } from '../../../utils/file-utils'
+import { extractTarball } from '../../../utils/tar-extractor'
+import { InstallationStateManager } from './installation-state'
+import { Logger } from '../../../utils/logger'
+import { PlatformDetector } from './platform-detector'
 
 export class RuntimeBinaryDownloader {
   private dataDir: string
@@ -190,8 +190,7 @@ export class RuntimeBinaryDownloader {
   private async extractTarball(tarballPath: string, destDir: string): Promise<void> {
     ensureDirectoryExists(destDir)
 
-    await tar.extract({
-      file: tarballPath,
+    await extractTarball(tarballPath, {
       cwd: destDir,
       strip: 1,
     })

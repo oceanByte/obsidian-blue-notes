@@ -20,18 +20,32 @@ export class EmbeddingProcessor {
   private stats: ProcessingStats
   private batchProcessor: BatchProcessor
   private queue: ProcessingQueue
+  private tokenLimit: number
 
-  constructor(plugin: SemanticNotesPlugin, cache: EmbeddingCache) {
+  constructor(plugin: SemanticNotesPlugin, cache: EmbeddingCache, tokenLimit?: number) {
     this.plugin = plugin
     this.cache = cache
     this.fileProcessor = new FileProcessor(plugin.app.vault, plugin.app)
-    this.chunker = new NoteChunker()
+    this.tokenLimit = tokenLimit || 512
+    const maxWords = this.calculateMaxWords(this.tokenLimit)
+    this.chunker = new NoteChunker({ maxWords })
     this.stats = new ProcessingStats()
     this.batchProcessor = new BatchProcessor({
       batchSize: plugin.settings.processing.batchSize,
       adaptiveBatching: plugin.settings.processing.adaptiveBatching,
     })
     this.queue = new ProcessingQueue()
+  }
+
+  private calculateMaxWords(tokenLimit: number): number {
+    return Math.floor(tokenLimit * 0.75)
+  }
+
+  updateTokenLimit(tokenLimit: number): void {
+    this.tokenLimit = tokenLimit
+    const maxWords = this.calculateMaxWords(tokenLimit)
+    this.chunker = new NoteChunker({ maxWords })
+    Logger.info(`Updated chunker configuration: tokenLimit=${tokenLimit}, maxWords=${maxWords}`)
   }
 
   /**

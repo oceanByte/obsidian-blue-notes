@@ -1,3 +1,4 @@
+import * as fs from 'fs'
 import * as path from 'path'
 
 import { Notice } from 'obsidian'
@@ -27,6 +28,12 @@ interface OnnxSession {
   run(feeds: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
+interface ModelMetadata {
+  maxSequenceLength: number;
+  dimensions: number;
+  modelName: string;
+}
+
 export class ONNXProvider implements EmbeddingProvider {
   readonly name = 'onnx'
   private plugin: SemanticNotesPlugin
@@ -38,6 +45,7 @@ export class ONNXProvider implements EmbeddingProvider {
   private currentModelType: ONNXModelType
   private binaryDownloader: RuntimeBinaryDownloader
   private readonly ONNX_VERSION = '1.23.0'
+  private modelMetadata: ModelMetadata | null = null
 
   constructor(plugin: SemanticNotesPlugin) {
     this.plugin = plugin
@@ -261,6 +269,53 @@ export class ONNXProvider implements EmbeddingProvider {
   }
 
   /**
+   * Extract model metadata from config.json
+   */
+  private extractModelMetadata(modelType: ONNXModelType): ModelMetadata {
+    const paths = this.downloader.getModelPaths(modelType)
+    const modelInfo = this.downloader.getModelInfo(modelType)
+
+    try {
+      const configContent = fs.readFileSync(paths.configPath, 'utf-8')
+      const config = JSON.parse(configContent)
+
+      const maxSequenceLength =
+        config.max_position_embeddings ||
+        config.max_sequence_length ||
+        config.model_max_length ||
+        512
+
+      Logger.debug(`Extracted token limit from model config: ${maxSequenceLength}`)
+
+      return {
+        maxSequenceLength,
+        dimensions: modelInfo.dimension,
+        modelName: modelInfo.name,
+      }
+    } catch (error) {
+      Logger.warn(
+        `Could not read model metadata from ${paths.configPath}, using defaults:`,
+        error.message
+      )
+      return {
+        maxSequenceLength: 512,
+        dimensions: modelInfo.dimension,
+        modelName: modelInfo.name,
+      }
+    }
+  }
+
+  /**
+   * Get the token limit for the current model
+   */
+  getTokenLimit(): number {
+    if (!this.modelMetadata) {
+      return 512
+    }
+    return this.modelMetadata.maxSequenceLength
+  }
+
+  /**
    * Load a specific model
    */
   private async loadModel(modelType: ONNXModelType): Promise<void> {
@@ -279,9 +334,11 @@ export class ONNXProvider implements EmbeddingProvider {
     })
 
     this.currentModelType = modelType
+    this.modelMetadata = this.extractModelMetadata(modelType)
 
     Logger.info('✓ ONNX provider initialized')
     Logger.info('Model type:', modelType)
+    Logger.info('Token limit:', this.modelMetadata.maxSequenceLength)
     Logger.debug('Input names:', this.session.inputNames)
     Logger.debug('Output names:', this.session.outputNames)
   }

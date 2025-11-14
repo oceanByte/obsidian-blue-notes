@@ -27,7 +27,7 @@ export class ChatView extends ItemView {
   private statusEl: HTMLElement
   private contextIndicator: HTMLElement
   private isProcessing = false
-  private customContextNotes: string[] = []
+  customContextNotes: string[] = []
 
   constructor(leaf: WorkspaceLeaf, plugin: SemanticNotesPlugin) {
     super(leaf)
@@ -103,6 +103,17 @@ export class ChatView extends ItemView {
     this.contextIndicator.addEventListener('click', () => this.toggleContextDetails())
 
     const buttons = header.createDiv({ cls: 'chat-context-buttons' })
+
+    const addCurrentNoteButton = buttons.createEl('button', {
+      cls: 'chat-context-add-button',
+      text: '📄',
+      attr: { 'aria-label': 'Add current note as context' },
+    })
+
+    addCurrentNoteButton.addEventListener('click', (e) => {
+      e.stopPropagation()
+      this.handleAddCurrentNote()
+    })
 
     const addButton = buttons.createEl('button', {
       cls: 'chat-context-add-button',
@@ -572,6 +583,45 @@ export class ChatView extends ItemView {
         new Notice(`${file.basename} is already in context`)
       }
     }).open()
+  }
+
+  handleAddCurrentNote(): void {
+    const activeFile = this.app.workspace.getActiveFile()
+
+    if (!activeFile) {
+      new Notice('No file is currently open')
+      return
+    }
+
+    if (activeFile.extension !== 'md') {
+      new Notice('Only markdown files can be added as context')
+      return
+    }
+
+    if (this.customContextNotes.includes(activeFile.path)) {
+      new Notice(`${activeFile.basename} is already in context`)
+      return
+    }
+
+    this.customContextNotes.push(activeFile.path)
+    new Notice(`Added ${activeFile.basename} to context`)
+
+    const wrapper = this.contextIndicator.parentElement?.parentElement
+    const detailsWereShown = wrapper?.querySelector('.chat-context-details') !== null
+
+    if (wrapper) {
+      const existingDetails = wrapper.querySelector('.chat-context-details')
+      if (existingDetails) {
+        existingDetails.remove()
+        this.contextIndicator.removeClass('expanded')
+      }
+    }
+
+    this.updateContextIndicator()
+
+    if (detailsWereShown) {
+      this.showContextDetails()
+    }
   }
 
   private removeCustomContext(notePath: string): void {

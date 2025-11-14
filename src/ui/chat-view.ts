@@ -537,7 +537,8 @@ export class ChatView extends ItemView {
       const markdown = this.sessionManager.exportToMarkdown()
 
       const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
-      const filename = `Chat ${timestamp}.md`
+      const unsanitized = `Chat ${timestamp}.md`
+      const filename = this.sanitizeFilename(unsanitized)
 
       await this.app.vault.create(filename, markdown)
       new Notice(`Exported to ${filename}`)
@@ -545,6 +546,10 @@ export class ChatView extends ItemView {
       Logger.error('Export error:', error)
       new Notice('Failed to export conversation')
     }
+  }
+
+  sanitizeFilename(filename: string): string {
+    return filename.replace(/[<>:"/\\|?*]/g, '-')
   }
 
   refresh(): void {

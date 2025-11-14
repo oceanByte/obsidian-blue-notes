@@ -14,12 +14,17 @@ export class Plugin {
 export class TFile {
 	path: string;
 	name: string;
+	basename: string;
+	extension: string;
 	parent: any;
 	stat: { mtime: number; ctime: number; size: number };
 
 	constructor(path: string) {
 		this.path = path;
 		this.name = path.split('/').pop() || path;
+		const parts = this.name.split('.');
+		this.basename = parts.slice(0, -1).join('.');
+		this.extension = parts[parts.length - 1] || '';
 		this.parent = null;
 		this.stat = {
 			mtime: Date.now(),
@@ -81,6 +86,57 @@ export class SuggestModal<T> {
 	open(): void {}
 
 	close(): void {}
+}
+
+export class FuzzySuggestModal<T> extends SuggestModal<T> {
+	constructor(app: App) {
+		super(app);
+	}
+}
+
+export class ItemView {
+	app: App;
+	containerEl: any;
+	leaf: any;
+
+	constructor(leaf: any) {
+		this.leaf = leaf;
+		this.app = leaf.view.app || new App();
+		this.containerEl = {
+			children: [
+				{ empty: vi.fn(), addClass: vi.fn(), createDiv: vi.fn() },
+				{ empty: vi.fn(), addClass: vi.fn(), createDiv: vi.fn(), createEl: vi.fn() },
+			],
+		};
+	}
+
+	getViewType(): string {
+		return '';
+	}
+
+	getDisplayText(): string {
+		return '';
+	}
+
+	getIcon(): string {
+		return '';
+	}
+
+	async onOpen(): Promise<void> {}
+
+	async onClose(): Promise<void> {}
+}
+
+export class MarkdownRenderer {
+	static renderMarkdown(
+		source: string,
+		el: HTMLElement,
+		sourcePath: string,
+		plugin: any,
+	): Promise<void> {
+		el.setText(source);
+		return Promise.resolve();
+	}
 }
 
 export const requestUrl = vi.fn(async (options: {

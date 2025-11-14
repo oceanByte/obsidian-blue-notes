@@ -1,5 +1,21 @@
 # blue-notes
 
+## 1.3.0
+
+### Minor Changes
+
+- [#26](https://github.com/oceanByte/obsidian-blue-notes/pull/26) [`28f1787`](https://github.com/oceanByte/obsidian-blue-notes/commit/28f17870be12fc94411b7240bcf685052ebdc3ad) Thanks [@oceanByte](https://github.com/oceanByte)! - Add chat context button for current note and fix export filename sanitization.
+
+  **Features:**
+
+  - Add "Add Current Note" button in chat context section that allows quick inclusion of the currently open markdown file as context in AI conversations. The button appears next to the manual file selector and validates that only markdown files are added.
+
+  **Fixes:**
+
+  - Fix chat export failing with "File name cannot contain any of the following characters: \ /" error. Filenames are now properly sanitized by removing invalid characters (< > : " / \ | ? \*), allowing exports to complete successfully on all platforms.
+
+  Both features improve the chat experience by reducing friction and fixing a blocking issue with conversation exports.
+
 ## 1.2.1
 
 ### Patch Changes

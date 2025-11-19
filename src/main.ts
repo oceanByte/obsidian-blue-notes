@@ -19,6 +19,7 @@ import { MESSAGES } from './constants/messages'
 import { ProviderManager } from './embeddings/provider-manager'
 import { SemanticNotesSettingTab } from './ui/settings-tab'
 import { SemanticSearch } from './search/semantic-search'
+import { InlineSemanticSuggest } from './ui/inline-semantic-suggest'
 
 
 
@@ -36,6 +37,9 @@ interface SemanticNotesSettings {
     minWordCount: number;
     adaptiveBatching: boolean;
     checkIntervalMinutes: number;
+  };
+  inlineSearch?: {
+    enabled: boolean;
   };
   logLevel: LogLevel;
   chat: ChatSettings;
@@ -56,6 +60,9 @@ const DEFAULT_SETTINGS: SemanticNotesSettings = {
     adaptiveBatching: true,
     checkIntervalMinutes: 5,
   },
+  inlineSearch: {
+    enabled: true,
+  },
   logLevel: LogLevel.ERROR,
   chat: DEFAULT_CHAT_SETTINGS,
 }
@@ -69,6 +76,7 @@ export default class SemanticNotesPlugin extends Plugin {
   fileProcessor: FileProcessor
   chatProviderManager: ChatProviderManager
   contextManager: ContextManager
+  inlineSemanticSuggest: InlineSemanticSuggest | null = null
   periodicCheckInterval: number | null = null
   settingsTab: SemanticNotesSettingTab | null = null
 
@@ -92,6 +100,12 @@ export default class SemanticNotesPlugin extends Plugin {
     this.chatProviderManager = new ChatProviderManager(this.settings.chat)
 
     this.contextManager = new ContextManager(this)
+
+    if (this.settings.inlineSearch?.enabled !== false) {
+      this.inlineSemanticSuggest = new InlineSemanticSuggest(this)
+      this.registerEditorSuggest(this.inlineSemanticSuggest)
+      Logger.info('Inline semantic search enabled')
+    }
 
     this.registerEvent(
       this.app.vault.on('delete', (file) => {

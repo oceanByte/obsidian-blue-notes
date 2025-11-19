@@ -53,6 +53,70 @@
     font-style: italic;
 }
 
+/* Inline semantic search results */
+.inline-semantic-search-result {
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+}
+
+.inline-semantic-search-result:hover,
+.inline-semantic-search-result.is-selected {
+    background-color: var(--background-modifier-hover);
+}
+
+.inline-semantic-search-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.inline-semantic-search-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.inline-semantic-search-filename {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.inline-semantic-search-heading-path {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+    opacity: 0.85;
+}
+
+.inline-semantic-search-preview {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    opacity: 0.9;
+}
+
+.inline-semantic-search-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px solid var(--background-modifier-border-hover);
+}
+
+.inline-semantic-search-meta {
+    font-size: 10px;
+    color: var(--text-faint);
+}
+
+.inline-semantic-search-tags {
+    font-size: 10px;
+    color: var(--text-faint);
+    font-style: italic;
+}
+
 /* Status bar */
 .blue-notes-status {
     display: flex;

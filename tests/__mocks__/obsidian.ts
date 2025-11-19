@@ -94,6 +94,28 @@ export class FuzzySuggestModal<T> extends SuggestModal<T> {
 	}
 }
 
+export class EditorSuggest<T> {
+	app: App;
+	context: any;
+
+	constructor(app: App) {
+		this.app = app;
+		this.context = null;
+	}
+
+	onTrigger(cursor: any, editor: any, file: any): any {
+		return null;
+	}
+
+	getSuggestions(context: any): T[] | Promise<T[]> {
+		return [];
+	}
+
+	renderSuggestion(value: T, el: HTMLElement): void {}
+
+	selectSuggestion(value: T, evt: MouseEvent | KeyboardEvent): void {}
+}
+
 export class ItemView {
 	app: App;
 	containerEl: any;

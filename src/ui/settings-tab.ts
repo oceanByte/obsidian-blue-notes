@@ -158,6 +158,26 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName('Search').setHeading()
 
     new Setting(containerEl)
+      .setName('Enable inline search')
+      .setDesc('Enable semantic search suggestions when you type ‘//’ followed by your query.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.inlineSearch?.enabled ?? true)
+          .onChange(async (value) => {
+            if (!this.plugin.settings.inlineSearch) {
+              this.plugin.settings.inlineSearch = {
+                enabled: value,
+              }
+            } else {
+              this.plugin.settings.inlineSearch.enabled = value
+            }
+            await this.plugin.saveSettings()
+
+            new Notice('Please reload the plugin for this change to take effect')
+          }),
+      )
+
+    new Setting(containerEl)
       .setName('Search threshold')
       .setDesc(
         'Minimum similarity score for search results (0.0 - 1.0). Lower = more results.',

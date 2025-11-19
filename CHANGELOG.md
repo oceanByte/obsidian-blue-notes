@@ -1,5 +1,11 @@
 # blue-notes
 
+## 1.4.0
+
+### Minor Changes
+
+- [#29](https://github.com/oceanByte/obsidian-blue-notes/pull/29) [`5f26a77`](https://github.com/oceanByte/obsidian-blue-notes/commit/5f26a773dc74a7703111766b496b4be02437ea0b) Thanks [@oceanByte](https://github.com/oceanByte)! - Added inline semantic search suggestions that trigger with '//' and provide real-time results as you type.
+
 ## 1.3.0
 
 ### Minor Changes

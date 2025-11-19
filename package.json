@@ -1,6 +1,6 @@
 {
   "name": "blue-notes",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Search notes by meaning. Semantic search powered by local AI embeddings.",
   "main": "main.js",
   "scripts": {

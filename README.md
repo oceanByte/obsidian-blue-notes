@@ -28,7 +28,7 @@ Blue Notes helps you search your notes by meaning, not just by words.
 It connects ideas, finds patterns you might have missed, and makes your notes feel more alive and connected.
 
 All semantic search happens locally on your computer, keeping your data safe and offline.
-The optional AI chat feature uses your own API key and connects to the internet only when you choose to use it.
+The optional AI chat can run completely private with Ollama, or use cloud providers (e.g. OpenAI, Anthropic, Google) with your API key.
 
 ## Features
 
@@ -37,7 +37,7 @@ The optional AI chat feature uses your own API key and connects to the internet 
 - 🌍 **Multi-Language Support** – Works with 100+ languages out of the box
 - ⚡ **Fast Results** – ONNX Runtime keeps semantic search fast on your device
 - 📦 **Minimal Dependencies** – Lightweight footprint with minimal external dependencies
-- 💬 **AI Chat (Optional)** – Ask questions about your notes using your own API key
+- 💬 **AI Chat (optional)** – Local AI with Ollama or cloud providers (e.g. OpenAI, Anthropic, Google)
 
 ## Getting Started
 
@@ -45,19 +45,12 @@ The optional AI chat feature uses your own API key and connects to the internet 
 1. Open Obsidian Settings → Community Plugins → Browse
 2. Install **"Blue Notes"** and enable it
 
-The plugin automatically:
-- Downloads ONNX Runtime binaries and AI embedding model
-- Indexes your vault in the background
-- Notifies you when ready
-
-**First-time setup takes a few minutes.** The plugin downloads ONNX Runtime (the engine that powers local AI) and an embedding model to enable private, offline semantic search. After this one-time setup, everything runs locally on your device.
+The plugin will automatically set itself up in the background. This includes downloading necessary components and indexing your notes which happens offline. First-time setup takes a few minutes. You'll be notified when it's ready.
 
 ### Step 2: Start Searching
-1. Open **Command Palette** (`Cmd/Ctrl + P`)
-2. Run "**Semantic search**"
-3. Type what you're looking for (by meaning, not exact words)
+Simply type `//` followed by your query in any note to start a semantic search.
 
-**Example:** Searching for "*happiness research*" will find notes about "*well-being studies*", "*positive psychology*", and "*life satisfaction*", even if those specific words aren't in your search.
+**Example:** Typing `//happiness research` will show notes about "well-being studies", "positive psychology", and "life satisfaction", even if those specific words aren't in your search.
 
 ### Step 3: Choose Your Model (Optional)
 
@@ -73,6 +66,7 @@ Open Settings → Blue Notes → Model selection to choose one of the following:
 
 | Command | Description |
 |---------|-------------|
+| `// your query` | Find notes by meaning from within any note |
 | **Semantic search** | Find notes by meaning across your entire vault |
 | **Find related notes** | Show notes semantically related to your current file |
 | **Process entire vault** | Index all notes (run once at setup, or after major changes) |
@@ -83,14 +77,16 @@ Open Settings → Blue Notes → Model selection to choose one of the following:
 Want to ask questions about your notes?
 
 1. Click the chat icon in the ribbon (or use Command Palette → "**Open AI chat**")
-2. Add an **API key** in settings (e.g. OpenAI)
+2. Choose your AI provider in settings:
+   - **Ollama (Recommended)** - 100% private, runs locally on your machine (requires good hardware)
+   - **OpenAI, Anthropic, Google** - Cloud-based, requires API key and internet
 3. Select which notes to include as context
 4. Ask questions like:
    - *"What are my main ideas about love?"*
    - *"Summarize everything I've written about postmodern philosophy"*
    - *"What connections exist between my work notes and personal goals?"*
 
-⚠️ **Note:** Chat requires an internet connection and only sends the notes you explicitly select. Search remains fully private and offline.
+💡 **Privacy First:** With Ollama, your chat is completely private and offline—just like semantic search. Cloud providers require internet and send selected notes to third-party services.
 
 ## Privacy: What Happens to Your Notes?
 
@@ -105,12 +101,19 @@ Want to ask questions about your notes?
 
 ### AI Chat (Optional Feature)
 
-- ⚠️ Only works when you choose to use it
-- ⚠️ Requires internet connection
+**Local AI with Ollama (Privacy-First):**
+- ✅ Runs 100% on your computer (requires decent hardware)
+- ✅ Works offline after initial model download
+- ✅ Your notes **never leave your device**
+- ✅ No API keys or third-party services needed
+- 📋 Requires: [Ollama](https://ollama.ai/) installed with models like `llama3`, `mistral`, or `gemma`
+
+**Cloud AI Providers (e.g. OpenAI, Anthropic, Google):**
+- ⚠️ Requires internet connection and API key
 - ⚠️ Only sends **notes you manually select** as context
 - ⚠️ Uses **your own API key** (you control the provider)
 
-**You're always in control.** The chat feature is completely optional and clearly separated from private search.
+**You're always in control.** Choose between completely private local AI (Ollama) or convenient cloud providers. The chat feature is entirely optional and clearly separated from private search.
 
 ## Where Files Are Stored
 
@@ -130,11 +133,12 @@ All data stays local and can be safely deleted anytime.
 
 | Question | Answer |
 |----------|--------|
-| **Is this really private?** | Yes. Semantic search runs 100% locally. AI chat only sends notes you explicitly choose, and only if you enable it. |
-| **Do I need an API key?** | No. Semantic search works without any API key. You only need one for the optional chat feature. |
-| **Does it work offline?** | Semantic search works offline. AI Chat needs internet. |
+| **Is this really private?** | Yes. Semantic search runs 100% locally. AI chat is also 100% private with Ollama, or you can use cloud providers that only send notes you explicitly select. |
+| **Do I need an API key?** | No. Semantic search and Ollama chat work without any API key. You only need one for cloud chat providers (e.g. OpenAI, Anthropic, Google). |
+| **Does it work offline?** | Yes. Semantic search and Ollama chat work offline. Cloud chat providers need internet. |
 | **Does it work on mobile?** | No, desktop-only. |
 | **Will it slow down Obsidian?** | Only during initial processing. After that, searches are very fast. |
+| **What hardware do I need for Ollama?** | At least 8GB RAM recommended. 16GB+ for larger models. Modern CPU or GPU helps with response speed. |
 
 ## Troubleshooting
 
@@ -160,18 +164,8 @@ All data stays local and can be safely deleted anytime.
 
 **AI chat not responding**
 - Check your API key in settings
-- Make sure you have internet connection
+- Make sure you have internet connection if using a cloud provider
 - Verify you've selected notes as context
-
-## Advanced Users
-
-## Build from Source
-```bash
-git clone https://github.com/oceanbyte/obsidian-blue-notes
-cd obsidian-blue-notes
-pnpm install
-pnpm run build
-```
 
 ### For Contributors
 

@@ -15,6 +15,7 @@
     "changeset:ai": "node scripts/changeset-ai.mjs",
     "version": "changeset version && node scripts/sync-version.mjs",
     "release": "pnpm build",
+    "deploy": "bash scripts/deploy.sh",
     "prepare": "husky"
   },
   "keywords": [

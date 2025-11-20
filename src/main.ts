@@ -1,11 +1,10 @@
 import { Notice, Plugin, TFile } from 'obsidian'
 
+import { CHAT_VIEW_TYPE, ChatView } from './ui/chat-view'
 import {
   type ChatSettings,
   DEFAULT_CHAT_SETTINGS,
 } from './chat/chat-settings'
-
-import { CHAT_VIEW_TYPE, ChatView } from './ui/chat-view'
 import { Logger, LogLevel } from './utils/logger'
 import { ONNXModelType, ProviderType } from './embeddings/provider-interface'
 import { SemanticSearchModal, SimilarNotesModal } from './ui/search-modal'
@@ -15,11 +14,11 @@ import { EmbeddingCache } from './embeddings/cache'
 import { EmbeddingProcessor } from './embeddings/processor'
 import { FileProcessor } from './utils/file-processor'
 import { getPluginDataDir } from './utils/plugin-paths'
+import { InlineSemanticSuggest } from './ui/inline-semantic-suggest'
 import { MESSAGES } from './constants/messages'
 import { ProviderManager } from './embeddings/provider-manager'
 import { SemanticNotesSettingTab } from './ui/settings-tab'
 import { SemanticSearch } from './search/semantic-search'
-import { InlineSemanticSuggest } from './ui/inline-semantic-suggest'
 
 
 
@@ -300,9 +299,10 @@ export default class SemanticNotesPlugin extends Plugin {
     if (this.settings.chat) {
       const { ProviderRegistry } = await import('./chat/providers/provider-config')
 
+      await import('./chat/providers/ollama-provider')
       await import('./chat/providers/openai-provider')
-      await import('./chat/providers/groq-provider')
       await import('./chat/providers/anthropic-provider')
+      await import('./chat/providers/groq-provider')
 
       for (const config of ProviderRegistry.getAll()) {
         this.settings.chat.apiKeys[config.id] ??= ''

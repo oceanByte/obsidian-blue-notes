@@ -82,7 +82,7 @@ export class ChatView extends ItemView {
     const newChatBtn = actions.createEl('button', {
       cls: 'chat-action-button',
       attr: { 'aria-label': 'New conversation' },
-      text: '📄',
+      text: '✨',
     })
     newChatBtn.addEventListener('click', () => this.handleNewChat())
   }
@@ -106,7 +106,7 @@ export class ChatView extends ItemView {
 
     const addCurrentNoteButton = buttons.createEl('button', {
       cls: 'chat-context-add-button',
-      text: '📄',
+      text: '📌',
       attr: { 'aria-label': 'Add current note as context' },
     })
 
@@ -372,6 +372,7 @@ export class ChatView extends ItemView {
       this.sessionManager.markFirstRequestComplete()
 
       assistantContentEl.empty()
+      assistantContentEl.setAttribute('data-markdown', fullResponse)
       await MarkdownRenderer.renderMarkdown(
         fullResponse,
         assistantContentEl,
@@ -466,6 +467,7 @@ export class ChatView extends ItemView {
     ) as HTMLElement
 
     if (message.role === 'assistant') {
+      contentEl.setAttribute('data-markdown', message.content)
       MarkdownRenderer.renderMarkdown(
         message.content,
         contentEl,
@@ -502,8 +504,8 @@ export class ChatView extends ItemView {
       })
 
       copyBtn.addEventListener('click', () => {
-        const text = content.getText()
-        navigator.clipboard.writeText(text)
+        const markdown = content.getAttribute('data-markdown') || content.getText()
+        navigator.clipboard.writeText(markdown)
         new Notice('Copied to clipboard')
       })
     }
@@ -536,12 +538,15 @@ export class ChatView extends ItemView {
     try {
       const markdown = this.sessionManager.exportToMarkdown()
 
-      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
+      const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ')
       const unsanitized = `Chat ${timestamp}.md`
       const filename = this.sanitizeFilename(unsanitized)
 
-      await this.app.vault.create(filename, markdown)
+      const file = await this.app.vault.create(filename, markdown)
       new Notice(`Exported to ${filename}`)
+
+      const leaf = this.app.workspace.getLeaf(false)
+      await leaf.openFile(file)
     } catch (error) {
       Logger.error('Export error:', error)
       new Notice('Failed to export conversation')

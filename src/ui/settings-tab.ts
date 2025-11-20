@@ -247,10 +247,15 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
     )
 
     if (selectedProviderConfig) {
+      const isOllama = selectedProviderConfig.id === 'ollama'
+      const apiKeyLabel = isOllama ? 'Server URL' : 'API key'
+      const apiKeyDesc = isOllama
+        ? 'Enter your Ollama server URL (e.g., http://localhost:11434)'
+        : 'Enter your API key'
 
       new Setting(containerEl)
-        .setName('API key')
-        .setDesc('Enter your API key')
+        .setName(apiKeyLabel)
+        .setDesc(apiKeyDesc)
         .addText((text) => {
           const apiKey = this.plugin.settings.chat.apiKeys[selectedProviderConfig.id] || ''
 
@@ -269,7 +274,7 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
                 chatView.refresh()
               }
             })
-          text.inputEl.type = 'password'
+          text.inputEl.type = isOllama ? 'text' : 'password'
           return text
         })
         .addButton((button) =>
@@ -281,10 +286,16 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
                 await this.plugin.chatProviderManager.validateProvider(
                   selectedProviderConfig.id,
                 )
+              const successMessage = isOllama
+                ? `${selectedProviderConfig.name} server is reachable`
+                : `${selectedProviderConfig.name} API key is valid`
+              const errorMessage = isOllama
+                ? `${selectedProviderConfig.name} server is unreachable`
+                : `${selectedProviderConfig.name} API key is invalid`
               if (isValid) {
-                new Notice(`${selectedProviderConfig.name} API key is valid`)
+                new Notice(successMessage)
               } else {
-                new Notice(`${selectedProviderConfig.name} API key is invalid`)
+                new Notice(errorMessage)
               }
             } catch (error) {
               new Notice(`Error: ${error.message}`)
@@ -295,51 +306,151 @@ export class SemanticNotesSettingTab extends PluginSettingTab {
           }),
         )
 
-      new Setting(containerEl)
-        .setName('Model')
-        .setDesc('Choose which model to use')
-        .addDropdown((dropdown) => {
-          selectedProviderConfig.availableModels.forEach((model) => {
-            dropdown.addOption(model.id, model.name)
-          })
+      if (isOllama) {
+        const modelSetting = new Setting(containerEl)
+          .setName('Model')
+          .setDesc('Click "Discover Models" to load your installed Ollama models')
 
-          const currentModel = this.plugin.settings.chat.models[selectedProviderConfig.id]
-          const isValid = selectedProviderConfig.availableModels.some(
-            (m) => m.id === currentModel,
-          )
-          const modelToUse = currentModel && isValid
-            ? currentModel
-            : selectedProviderConfig.defaultModel
+        const createModelDropdown = async (discoveredModels: string[] = []) => {
+          modelSetting.clear()
+          modelSetting.setName('Model')
 
-          if (modelToUse !== currentModel) {
-            this.plugin.settings.chat.models[selectedProviderConfig.id] = modelToUse
-            this.plugin.saveSettings()
+          if (discoveredModels.length > 0) {
+            modelSetting.setDesc(`Found ${discoveredModels.length} installed model(s)`)
+
+            const currentModel = this.plugin.settings.chat.models[selectedProviderConfig.id] || selectedProviderConfig.defaultModel
+
+            modelSetting.addDropdown((dropdown) => {
+              discoveredModels.forEach((model) => {
+                dropdown.addOption(model, model)
+              })
+
+              const modelExists = discoveredModels.includes(currentModel)
+              dropdown.setValue(modelExists ? currentModel : discoveredModels[0])
+
+              if (!modelExists && discoveredModels.length > 0) {
+                this.plugin.settings.chat.models[selectedProviderConfig.id] = discoveredModels[0]
+                this.plugin.saveSettings()
+              }
+
+              dropdown.onChange(async (value) => {
+                this.plugin.settings.chat.models[selectedProviderConfig.id] = value
+                await this.plugin.saveSettings()
+                this.plugin.chatProviderManager.updateSettings(
+                  this.plugin.settings.chat,
+                )
+
+                const chatView = this.plugin.getChatView()
+                if (chatView) {
+                  chatView.refresh()
+                }
+              })
+              return dropdown
+            })
+          } else {
+            modelSetting.setDesc('Click "Discover Models" to load your installed Ollama models')
           }
 
-          return dropdown.setValue(modelToUse).onChange(async (value) => {
-            this.plugin.settings.chat.models[selectedProviderConfig.id] = value
-            await this.plugin.saveSettings()
-            this.plugin.chatProviderManager.updateSettings(
-              this.plugin.settings.chat,
+          modelSetting.addButton((button) =>
+            button
+              .setButtonText('Discover Models')
+              .setTooltip('Fetch installed models from Ollama server')
+              .onClick(async () => {
+                button.setDisabled(true)
+                button.setButtonText('Discovering...')
+                try {
+                  const provider = this.plugin.chatProviderManager.getProvider()
+                  if (provider && 'getAvailableModels' in provider) {
+                    const models = await (
+                      provider as { getAvailableModels: () => Promise<string[]> }
+                    ).getAvailableModels()
+
+                    if (models.length > 0) {
+                      new Notice(`Found ${models.length} model(s)`)
+                      await createModelDropdown(models)
+                    } else {
+                      new Notice('No models found. Make sure Ollama is running and models are installed.')
+                    }
+                  }
+                } catch (error) {
+                  new Notice(`Failed to discover models: ${error.message}`)
+                } finally {
+                  button.setDisabled(false)
+                  button.setButtonText('Discover Models')
+                }
+              }),
+          )
+        }
+
+        const serverUrl = this.plugin.settings.chat.apiKeys[selectedProviderConfig.id]
+        if (serverUrl && serverUrl.length > 0) {
+          const provider = this.plugin.chatProviderManager.getProvider()
+          if (provider && 'getAvailableModels' in provider) {
+            (provider as { getAvailableModels: () => Promise<string[]> })
+              .getAvailableModels()
+              .then(models => {
+                if (models.length > 0) {
+                  createModelDropdown(models)
+                } else {
+                  createModelDropdown([])
+                }
+              })
+              .catch(() => {
+                createModelDropdown([])
+              })
+          } else {
+            createModelDropdown([])
+          }
+        } else {
+          createModelDropdown([])
+        }
+      } else {
+        new Setting(containerEl)
+          .setName('Model')
+          .setDesc('Choose which model to use')
+          .addDropdown((dropdown) => {
+            selectedProviderConfig.availableModels.forEach((model) => {
+              dropdown.addOption(model.id, model.name)
+            })
+
+            const currentModel = this.plugin.settings.chat.models[selectedProviderConfig.id]
+            const isValid = selectedProviderConfig.availableModels.some(
+              (m) => m.id === currentModel,
             )
+            const modelToUse = currentModel && isValid
+              ? currentModel
+              : selectedProviderConfig.defaultModel
 
-            const provider = this.plugin.chatProviderManager.getProvider()
-            if (provider && 'switchModel' in provider) {
-              try {
-                await (
-                  provider as { switchModel: (model: string) => Promise<void> }
-                ).switchModel(value)
-              } catch (error) {
-                new Notice(MESSAGES.ERROR(error.message))
+            if (modelToUse !== currentModel) {
+              this.plugin.settings.chat.models[selectedProviderConfig.id] = modelToUse
+              this.plugin.saveSettings()
+            }
+
+            return dropdown.setValue(modelToUse).onChange(async (value) => {
+              this.plugin.settings.chat.models[selectedProviderConfig.id] = value
+              await this.plugin.saveSettings()
+              this.plugin.chatProviderManager.updateSettings(
+                this.plugin.settings.chat,
+              )
+
+              const provider = this.plugin.chatProviderManager.getProvider()
+              if (provider && 'switchModel' in provider) {
+                try {
+                  await (
+                    provider as { switchModel: (model: string) => Promise<void> }
+                  ).switchModel(value)
+                } catch (error) {
+                  new Notice(MESSAGES.ERROR(error.message))
+                }
               }
-            }
 
-            const chatView = this.plugin.getChatView()
-            if (chatView) {
-              chatView.refresh()
-            }
+              const chatView = this.plugin.getChatView()
+              if (chatView) {
+                chatView.refresh()
+              }
+            })
           })
-        })
+      }
     }
 
     new Setting(containerEl)

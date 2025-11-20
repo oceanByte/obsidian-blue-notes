@@ -3,9 +3,10 @@ import type { ChatSettings } from '../chat-settings'
 import { Logger } from '../../utils/logger'
 import { ProviderRegistry } from './provider-config'
 
+import './ollama-provider'
 import './openai-provider'
-import './groq-provider'
 import './anthropic-provider'
+import './groq-provider'
 import './requesty-provider'
 
 export class ChatProviderManager {

@@ -23,7 +23,7 @@ export function getDefaultChatSettings(): ChatSettings {
   }
 
   return {
-    provider: providers[0]?.id || 'openai',
+    provider: providers[0]?.id || 'ollama',
     apiKeys,
     models,
     temperature: 0.5,

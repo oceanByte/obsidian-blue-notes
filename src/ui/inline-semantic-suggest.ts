@@ -7,8 +7,9 @@ import {
   TFile,
 } from 'obsidian'
 
-import { Logger } from '../utils/logger'
 import type { ChunkSearchResult } from '../search/semantic-search'
+import { Logger } from '../utils/logger'
+
 import type SemanticNotesPlugin from '../main'
 
 /**

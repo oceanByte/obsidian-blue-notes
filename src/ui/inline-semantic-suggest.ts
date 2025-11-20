@@ -65,7 +65,7 @@ export class InlineSemanticSuggest extends EditorSuggest<ChunkSearchResult> {
   ): Promise<ChunkSearchResult[]> {
     const query = context.query.trim()
     const MIN_QUERY_LENGTH = 2
-    const DEBOUNCE_DELAY_MS = 300
+    const DEBOUNCE_DELAY_MS = 350
 
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout)

@@ -10,7 +10,7 @@ import './groq-provider'
 import './requesty-provider'
 
 export class ChatProviderManager {
-  private providers = new Map<string, ChatProvider>()
+  private providerCache = new Map<string, ChatProvider>()
   private currentProvider: ChatProvider | null = null
 
   constructor(private settings: ChatSettings) {
@@ -18,25 +18,31 @@ export class ChatProviderManager {
   }
 
   initialize(): void {
-    this.providers.clear()
-
-    for (const config of ProviderRegistry.getAll()) {
-      const apiKey = this.settings.apiKeys[config.id] || ''
-      const model = this.settings.models[config.id] || config.defaultModel
-
-      const provider = config.createProvider(apiKey, model)
-
-      if (provider.isConfigured()) {
-        this.providers.set(config.id, provider)
-        Logger.debug(`${config.name} provider initialized`)
-      }
-    }
-
     this.selectProvider(this.settings.provider)
   }
 
+  private createProvider(providerName: string): ChatProvider | null {
+    const config = ProviderRegistry.get(providerName)
+    if (!config) {
+      return null
+    }
+
+    const apiKey = this.settings.apiKeys[config.id] || ''
+    const model = this.settings.models[config.id] || config.defaultModel
+
+    return config.createProvider(apiKey, model)
+  }
+
   selectProvider(providerName: string): void {
-    const provider = this.providers.get(providerName)
+    let provider = this.providerCache.get(providerName)
+
+    if (!provider) {
+      provider = this.createProvider(providerName)
+      if (provider) {
+        this.providerCache.set(providerName, provider)
+        Logger.debug(`${provider.name} provider initialized`)
+      }
+    }
 
     if (!provider) {
       Logger.warn(`Provider '${providerName}' not available or not configured`)
@@ -59,13 +65,12 @@ export class ChatProviderManager {
   }
 
   getAvailableProviders(): string[] {
-    return Array.from(this.providers.keys()).filter((key) =>
-      this.providers.get(key)?.isConfigured(),
-    )
+    return ProviderRegistry.getAllIds()
   }
 
   isProviderAvailable(providerName: string): boolean {
-    const provider = this.providers.get(providerName)
+    const provider =
+      this.providerCache.get(providerName) || this.createProvider(providerName)
     return provider ? provider.isConfigured() : false
   }
 
@@ -92,7 +97,8 @@ export class ChatProviderManager {
   }
 
   async validateProvider(providerName: string): Promise<boolean> {
-    const provider = this.providers.get(providerName)
+    const provider =
+      this.providerCache.get(providerName) || this.createProvider(providerName)
 
     if (!provider) {
       return false
@@ -108,6 +114,7 @@ export class ChatProviderManager {
 
   updateSettings(settings: ChatSettings): void {
     this.settings = settings
+    this.providerCache.clear()
     this.initialize()
   }
 
@@ -116,7 +123,7 @@ export class ChatProviderManager {
       return null
     }
 
-    for (const [name, provider] of this.providers.entries()) {
+    for (const [name, provider] of this.providerCache.entries()) {
       if (provider === this.currentProvider) {
         return name
       }
@@ -130,7 +137,7 @@ export class ChatProviderManager {
   }
 
   dispose(): void {
-    this.providers.clear()
+    this.providerCache.clear()
     this.currentProvider = null
   }
 }

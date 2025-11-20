@@ -288,12 +288,6 @@ ProviderRegistry.register({
   createProvider: (serverUrl: string, model: string) =>
     new OllamaProvider(serverUrl, model),
   defaultModel: 'llama2',
-  availableModels: [
-    { id: 'llama2', name: 'Llama 2' },
-    { id: 'llama3', name: 'Llama 3' },
-    { id: 'mistral', name: 'Mistral' },
-    { id: 'gemma', name: 'Gemma' },
-    { id: 'codellama', name: 'Code Llama' },
-  ],
+  availableModels: [],
   apiKeyPlaceholder: 'http://localhost:11434',
 })

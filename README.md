@@ -45,7 +45,7 @@ The optional AI chat can run completely private with Ollama, or use cloud provid
 1. Open Obsidian Settings → Community Plugins → Browse
 2. Install **"Blue Notes"** and enable it
 
-The plugin will automatically set itself up in the background. This includes downloading necessary components and indexing your notes which appens offline. First-time setup takes a few minutes. You'll be notified when it's ready.
+The plugin will automatically set itself up in the background. This includes downloading necessary components and indexing your notes which happens offline. First-time setup takes a few minutes. You'll be notified when it's ready.
 
 ### Step 2: Start Searching
 Simply type `//` followed by your query in any note to start a semantic search.

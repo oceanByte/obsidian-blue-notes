@@ -8,7 +8,7 @@ export class GoogleProvider extends BaseHttpProvider {
   protected config: HttpProviderConfig = {
     name: 'Google',
     chatEndpoint: `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:streamGenerateContent?alt=sse`,
-    validateEndpoint: `https://generativelanguage.googleapis.com/v1beta/models/${this.model}`,
+    validateEndpoint: `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`,
     authHeader: (apiKey: string) => ({
       'x-goog-api-key': apiKey,
     }),
@@ -111,7 +111,6 @@ export class GoogleProvider extends BaseHttpProvider {
   }
 
   async validateApiKey(): Promise<boolean> {
-    Logger.debug(this.apiKey)
     if (!this.isConfigured()) {
       Logger.debug('Google API key not configured')
       return false
@@ -131,9 +130,12 @@ export class GoogleProvider extends BaseHttpProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: this.model,
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'Hi' }],
+          contents: [{
+            parts: [{ text: 'Hi' }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 1
+          }
         }),
       })
 

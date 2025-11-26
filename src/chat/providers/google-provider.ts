@@ -7,9 +7,7 @@ import { requestUrl } from 'obsidian'
 export class GoogleProvider extends BaseHttpProvider {
   protected config: HttpProviderConfig = {
     name: 'Google',
-    chatEndpoint: `https://generativelanguage.googleapis.com/v1/models/${
-      this.model
-    }:generateContent`,
+    chatEndpoint: `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent`,
     validateEndpoint: `https://generativelanguage.googleapis.com/v1/models/${this.model}`,
     authHeader: (apiKey: string) => ({
       'x-goog-api-key': apiKey,
@@ -23,19 +21,70 @@ export class GoogleProvider extends BaseHttpProvider {
             })),
           },
         ],
-        generationConfig:{
+        generationConfig: {
           maxOutputTokens: request.maxTokens ?? 2000,
-        }
+        },
       }
 
       if (request.temperature !== undefined) {
-        body.generationConfig = { ...body.generationConfig, temperature: request.temperature }
+        body.generationConfig = {
+          ...body.generationConfig,
+          temperature: request.temperature,
+        }
       }
 
       return body
     },
+    parseResponse: (data: unknown) => {
+      Logger.debug('parseResponse____________')
+      const response = data as {
+        candidates: [{
+          content: {
+            parts: [
+              {
+                text: string;
+              }
+            ];
+          };
+        }];
+        modelVersion: string;
+        usageMetadata: {
+          promptTokenCount: number;
+          candidatesTokenCount: number;
+          thoughtsTokenCount: number;
+          totalTokenCount: number;
+        };
+      }
+
+      return {
+        content: response.candidates[0].content.parts[0].text,
+        model: response.modelVersion,
+        usage: response.usageMetadata
+          ? {
+            promptTokens: response.usageMetadata.promptTokenCount,
+            completionTokens: response.usageMetadata.candidatesTokenCount,
+            thoughtsTokens: response.usageMetadata.thoughtsTokenCount,
+            totalTokens: response.usageMetadata.totalTokenCount,
+          }
+          : undefined,
+      }
+    },
+    parseStreamChunk: (json: unknown) => {
+      Logger.debug('stream________')
+      const chunk = json as {
+         candidates: [{
+          content: {
+            parts: [
+              {
+                text: string;
+              }
+            ];
+          };
+        }];
+      }
+      return chunk.candidates[0].content.parts[0].text
+    },
   }
-  request: any
 
   async validateApiKey(): Promise<boolean> {
     Logger.debug(this.apiKey)

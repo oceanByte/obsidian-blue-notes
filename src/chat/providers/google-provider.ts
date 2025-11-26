@@ -7,8 +7,8 @@ import { requestUrl } from 'obsidian'
 export class GoogleProvider extends BaseHttpProvider {
   protected config: HttpProviderConfig = {
     name: 'Google',
-    chatEndpoint: `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent`,
-    validateEndpoint: `https://generativelanguage.googleapis.com/v1/models/${this.model}`,
+    chatEndpoint: `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:streamGenerateContent?alt=sse`,
+    validateEndpoint: `https://generativelanguage.googleapis.com/v1beta/models/${this.model}`,
     authHeader: (apiKey: string) => ({
       'x-goog-api-key': apiKey,
     }),
@@ -36,53 +36,77 @@ export class GoogleProvider extends BaseHttpProvider {
       return body
     },
     parseResponse: (data: unknown) => {
-      Logger.debug('parseResponse____________')
-      const response = data as {
-        candidates: [{
-          content: {
-            parts: [
-              {
-                text: string;
-              }
-            ];
+      Logger.debug('parseResponse input:', data)
+      try {
+        const response = data as {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: string;
+                  }
+                ];
+              };
+            }
+          ];
+          modelVersion: string;
+          usageMetadata: {
+            promptTokenCount: number;
+            candidatesTokenCount: number;
+            thoughtsTokenCount: number;
+            totalTokenCount: number;
           };
-        }];
-        modelVersion: string;
-        usageMetadata: {
-          promptTokenCount: number;
-          candidatesTokenCount: number;
-          thoughtsTokenCount: number;
-          totalTokenCount: number;
-        };
-      }
+        }
 
-      return {
-        content: response.candidates[0].content.parts[0].text,
-        model: response.modelVersion,
-        usage: response.usageMetadata
-          ? {
-            promptTokens: response.usageMetadata.promptTokenCount,
-            completionTokens: response.usageMetadata.candidatesTokenCount,
-            thoughtsTokens: response.usageMetadata.thoughtsTokenCount,
-            totalTokens: response.usageMetadata.totalTokenCount,
-          }
-          : undefined,
+        const text = response.candidates?.[0]?.content?.parts?.[0]?.text
+        if (!text) {
+          Logger.error('No text found in response:', response)
+          throw new Error('No text content in response')
+        }
+
+        Logger.debug('Extracted text from response:', text)
+        return {
+          content: text,
+          model: response.modelVersion,
+          usage: response.usageMetadata
+            ? {
+              promptTokens: response.usageMetadata.promptTokenCount,
+              completionTokens:
+                  response.usageMetadata.candidatesTokenCount,
+              thoughtsTokens: response.usageMetadata.thoughtsTokenCount,
+              totalTokens: response.usageMetadata.totalTokenCount,
+            }
+            : undefined,
+        }
+      } catch (error) {
+        Logger.error('Error parsing response:', error)
+        throw error
       }
     },
     parseStreamChunk: (json: unknown) => {
-      Logger.debug('stream________')
-      const chunk = json as {
-         candidates: [{
-          content: {
-            parts: [
-              {
-                text: string;
-              }
-            ];
-          };
-        }];
+      Logger.debug('parseStreamChunk input:', json)
+      try {
+        const chunk = json as {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: string;
+                  }
+                ];
+              };
+            }
+          ];
+        }
+        const text = chunk.candidates?.[0]?.content?.parts?.[0]?.text
+        Logger.debug('Extracted text from chunk:', text)
+        return text
+      } catch (error) {
+        Logger.error('Error parsing stream chunk:', error)
+        return null
       }
-      return chunk.candidates[0].content.parts[0].text
     },
   }
 

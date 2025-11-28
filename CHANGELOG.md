@@ -1,5 +1,11 @@
 # blue-notes
 
+## 1.6.0
+
+### Minor Changes
+
+- [#35](https://github.com/oceanByte/obsidian-blue-notes/pull/35) [`f791d25`](https://github.com/oceanByte/obsidian-blue-notes/commit/f791d255b0dfc77c2a548f9cf444a953ead399fd) Thanks [@KevinRohlf](https://github.com/KevinRohlf)! - Google provider added for Gemini integration
+
 ## 1.5.0
 
 ### Minor Changes

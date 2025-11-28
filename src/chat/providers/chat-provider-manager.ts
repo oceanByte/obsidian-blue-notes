@@ -7,6 +7,7 @@ import './ollama-provider'
 import './openai-provider'
 import './anthropic-provider'
 import './groq-provider'
+import './google-provider'
 import './requesty-provider'
 
 export class ChatProviderManager {
